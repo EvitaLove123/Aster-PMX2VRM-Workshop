@@ -1,45 +1,41 @@
 # Aster PMX2VRM Workshop
 
-Android-first project scaffold for a browser-based PMX to VRM 0.x workflow.
+Android-first browser project for inspecting MMD PMX models and preparing a future PMX to VRM 0.x workflow.
 
-> **Current status:** Prototype scaffold only. This repository does not yet provide a complete PMX-to-VRM converter. Do not treat the current interface as a production exporter.
+> **Current status:** The repository now includes an early PMX import and interactive 3D preview prototype. It is not a complete PMX-to-VRM converter. Browser integration and representative-model testing are still required.
 
 ## Project goals
 
-- PMX-only input for the first development phase
+- PMX input for the first development phase
 - English-only website interface
+- Android Chrome-friendly layout
 - Preserve original source bone names and show English Humanoid labels separately
 - Automatic Humanoid mapping with manual correction
-- Automatic A-pose to T-pose preparation with manual adjustment
-- VRM 0.x export
-- Android Chrome and GitHub Pages support
+- Safe, reversible A-pose to T-pose preparation
+- VRM 0.x export with structural validation
 
-## Technical targets
+## Current implementation
 
-- VRM 0.x format
-- UniVRM 0.106.0-compatible metadata
-- AlwaysUnlit and MToon material support
-- Preserve textures, materials, and model appearance
-- Preserve facial expressions and blendshape data where conversion is supported
-- Support secondary animation data, including spring bones and colliders, where conversion is supported
+- `index.html` — mobile-friendly interface with PMX file selection
+- Three.js scene, camera, lighting, grid, and touch-friendly OrbitControls
+- MMDLoader integration for parsing PMX data in the browser
+- Optional selection of external texture files, matched by filename
+- Interactive model preview and basic mesh, material, and bone counts
+- Optional skeleton helper overlay
 
-These are development targets, not verified compatibility claims. Output files must pass structural validation and be tested with independent VRM viewers and tools.
-
-## Current repository contents
-
-- `index.html` — mobile-friendly English project interface
-- `README.md` — project scope and development status
+**Testing status:** The code has been committed, but it has not yet been verified against the user's PMX files or on Android Chrome. Some MMD material, toon, IK, physics, and texture-path behavior may differ between models. Treat this as an experimental preview until tested.
 
 ## Planned development phases
 
-1. Validate PMX parsing and texture loading on Android Chrome.
-2. Inspect skeleton hierarchy, source bone names, bind pose, and model scale.
-3. Implement automatic Humanoid mapping, including finger bones, and a manual mapping editor.
-4. Analyze arm pose and implement safe, reversible A-pose to T-pose adjustments.
-5. Convert materials, textures, facial expressions, and blendshape data.
-6. Convert supported secondary animation data, including spring bones and colliders.
-7. Implement VRM 0.x export and structural validation.
-8. Test exported files with independent VRM viewers, validators, and representative models.
+1. Test PMX parsing and texture loading with representative models on Android Chrome.
+2. Improve texture path resolution and report missing texture references.
+3. Inspect skeleton hierarchy, source bone names, bind pose, model scale, and mesh deformation.
+4. Implement automatic Humanoid mapping, including finger bones, and a manual mapping editor.
+5. Analyze arm pose and implement safe, reversible A-pose to T-pose adjustments.
+6. Convert materials, textures, facial expressions, and blendshape data.
+7. Convert supported secondary animation data, including spring bones and colliders.
+8. Implement VRM 0.x export and structural validation.
+9. Test exported files with independent VRM viewers, validators, and representative models.
 
 ## Export validation checklist
 
@@ -54,7 +50,15 @@ These are development targets, not verified compatibility claims. Output files m
 
 A successful structural check does not guarantee that every application will interpret every model identically.
 
-## Safety and model integrity
+## Known limitations
+
+- The current prototype does not export VRM files.
+- Humanoid mapping and pose editing are not implemented.
+- PMX textures may need to be selected separately; filename matching is best-effort.
+- Full MMD toon shading, IK animation, physics, and all PMX material extensions are not guaranteed in the preview.
+- The page loads Three.js modules from a CDN, so an internet connection is required.
+
+## Model integrity
 
 MMD rigs may contain IK, append transforms, unusual local axes, and model-specific skin weights. Never apply a universal 180-degree bone rotation or overwrite source weights without validation. Keep the original model data recoverable during editing.
 
@@ -66,9 +70,9 @@ MMD rigs may contain IK, append transforms, unusual local axes, and model-specif
 4. Save and wait for the deployment to finish.
 5. Open the Pages URL shown in the Pages settings.
 
-## Development notes
+## Third-party library
 
-The project is designed for Android-first browser use. Third-party libraries and their licenses must be reviewed before bundling or redistributing them.
+The preview uses Three.js and its MMDLoader example module via jsDelivr CDN. Review the upstream Three.js license and example-module terms before bundling or redistributing dependencies.
 
 ## License
 
