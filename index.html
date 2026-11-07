@@ -190,6 +190,10 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     manager.setURLModifier(url => textureMap.get(normalizePath(url)) || textureMap.get(normalizeName(url)) || url);
     manager.onError = url => setStatus('Model parsed; a texture could not be loaded: ' + normalizeName(url), '');
     const loader = new MMDLoader(manager);
+    // The PMX is loaded from a Blob URL, whose pathname has no .pmx suffix.
+    // Tell MMDLoader the known input format so it does not mistake the host
+    // name (for example github.io) for the model extension.
+    loader._extractExtension = () => 'pmx';
     setStatus('Parsing PMX…');
     // MMDLoader in Three.js r160 does not implement parse(ArrayBuffer).
     // Load the selected in-memory PMX through a temporary Blob URL instead.
