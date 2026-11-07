@@ -191,8 +191,20 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     manager.onError = url => setStatus('Model parsed; a texture could not be loaded: ' + normalizeName(url), '');
     const loader = new MMDLoader(manager);
     setStatus('Parsing PMX…');
-    const model = loader.parse(buffer, displayName);
-    if (!model || !model.isSkinnedMesh) throw new Error('The parser did not return a valid skinned MMD mesh.');
+    // MMDLoader in Three.js r160 does not implement parse(ArrayBuffer).
+    // Load the selected in-memory PMX through a temporary Blob URL instead.
+    const modelUrl = URL.createObjectURL(new Blob([buffer], { type: 'application/octet-stream' }));
+    let model;
+    try {
+      model = await new Promise((resolve, reject) => {
+        loader.load(modelUrl, resolve, undefined, reject);
+      });
+    } finally {
+      URL.revokeObjectURL(modelUrl);
+    }
+    if (!model || !model.isSkinnedMesh || !model.geometry || !model.skeleton) {
+      throw new Error('MMDLoader did not produce a valid skinned PMX model.');
+    }
     currentModel = model; scene.add(model);
     skeletonHelper = new THREE.SkeletonHelper(model);
     skeletonHelper.visible = false; scene.add(skeletonHelper);
@@ -209,8 +221,9 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     setStatus('PMX parsed — preview ready', 'good');
   } catch (err) {
     console.error(err);
-    setStatus('Could not parse this PMX file', 'bad');
-    $('details').textContent = (err && err.message ? err.message : String(err)) + ' Check that the file is a valid PMX. Some texture formats may not be supported in this preview yet.';
+    const reason = err && err.message ? err.message : String(err);
+    setStatus('PMX load failed: ' + reason.slice(0, 90), 'bad');
+    $('details').textContent = 'PMX loading error: ' + reason + ' Check that the file is a valid PMX. Some texture formats may not be supported in this preview yet.';
     empty.style.display = 'grid';
   }
 }
