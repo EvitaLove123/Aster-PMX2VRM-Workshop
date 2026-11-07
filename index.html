@@ -190,21 +190,19 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     manager.setURLModifier(url => textureMap.get(normalizePath(url)) || textureMap.get(normalizeName(url)) || url);
     manager.onError = url => setStatus('Model parsed; a texture could not be loaded: ' + normalizeName(url), '');
     const loader = new MMDLoader(manager);
-    // The PMX is loaded from a Blob URL, whose pathname has no .pmx suffix.
-    // Tell MMDLoader the known input format so it does not mistake the host
-    // name (for example github.io) for the model extension.
-    loader._extractExtension = () => 'pmx';
+    // MMDLoader detects PMX/PMD by checking the final extension in the URL.
+    // Blob URLs contain the page host (for example github.io) and a UUID,
+    // so add a harmless query suffix ending in .pmx for reliable detection.
     setStatus('Parsing PMX…');
-    // MMDLoader in Three.js r160 does not implement parse(ArrayBuffer).
-    // Load the selected in-memory PMX through a temporary Blob URL instead.
-    const modelUrl = URL.createObjectURL(new Blob([buffer], { type: 'application/octet-stream' }));
+    const blobUrl = URL.createObjectURL(new Blob([buffer], { type: 'application/octet-stream' }));
+    const modelUrl = blobUrl + '?filename=model.pmx';
     let model;
     try {
       model = await new Promise((resolve, reject) => {
         loader.load(modelUrl, resolve, undefined, reject);
       });
     } finally {
-      URL.revokeObjectURL(modelUrl);
+      URL.revokeObjectURL(blobUrl);
     }
     if (!model || !model.isSkinnedMesh || !model.geometry || !model.skeleton) {
       throw new Error('MMDLoader did not produce a valid skinned PMX model.');
