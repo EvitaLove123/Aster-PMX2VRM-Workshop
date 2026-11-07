@@ -146,7 +146,9 @@ function frameModel(object) {
 }
 function normalizePath(s) {
   try { s = decodeURIComponent(s); } catch(e) {}
-  return s.replace(/\\\\/g, '/').replace(/^\\.\\//, '').toLocaleLowerCase();
+  s = s.split(String.fromCharCode(92)).join('/');
+  while (s.startsWith('./')) s = s.slice(2);
+  return s.toLocaleLowerCase();
 }
 function normalizeName(s) { return normalizePath(s).split('/').pop(); }
 function clearTextureUrls() {
