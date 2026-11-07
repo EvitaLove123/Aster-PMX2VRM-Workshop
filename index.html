@@ -20,7 +20,7 @@ ul{padding-left:21px}.done{color:#23633b}
 @media(max-width:600px){.grid{grid-template-columns:1fr}.card{padding:14px}#viewport{min-height:280px}}
 </style>
 <script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/","jszip":"https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm"}}
 </script>
 </head>
 <body>
@@ -29,8 +29,9 @@ ul{padding-left:21px}.done{color:#23633b}
 <section class="hero"><small>MMD CONVERSION WORKBENCH</small><h1>PMX → VRM 0.x</h1><p>Import an MMD PMX model, inspect its 3D appearance, and prepare it for a verified conversion workflow.</p></section>
 <section class="card">
 <h2>1. Import PMX</h2>
-<div class="drop"><strong>Select a PMX model</strong><br><input id="pmx" type="file" accept=".pmx,application/octet-stream"><p class="note">Choose one .pmx file from your device. Large models may take longer to parse.</p></div>
-<div class="drop" style="margin-top:12px"><strong>Optional: select the model's texture files</strong><br><input id="textures" type="file" accept="image/*,.tga" multiple><p class="note">If textures are missing, select the image files referenced by the PMX. Matching is performed by filename.</p></div>
+<div class="drop"><strong>Option A — Import a complete ZIP package</strong><br><input id="zip" type="file" accept=".zip,application/zip"><p class="note">Recommended: select a ZIP containing one PMX and its texture folders. The workshop will locate the PMX and prepare texture assets automatically.</p></div>
+<div class="drop" style="margin-top:12px"><strong>Option B — Select a PMX file</strong><br><input id="pmx" type="file" accept=".pmx,application/octet-stream"><p class="note">You can also select a PMX file directly, then add its textures below.</p></div>
+<div class="drop" style="margin-top:12px"><strong>Optional: select texture files separately</strong><br><input id="textures" type="file" accept="image/*,.tga,.bmp,.spa,.sph" multiple><p class="note">Used with direct PMX import when the original texture folder is not available.</p></div>
 <p><span class="status" id="state">Waiting for a PMX file</span></p>
 <div id="viewport"><div class="empty" id="empty">Your 3D model preview will appear here.<br>Choose a PMX file to begin.</div></div>
 <button id="reset" class="secondary" type="button">Reset camera</button><button id="skeleton" class="secondary" type="button" disabled>Show skeleton</button>
@@ -51,7 +52,8 @@ ul{padding-left:21px}.done{color:#23633b}
 <section class="card">
 <h2>3. Conversion pipeline</h2>
 <ul>
-<li class="done">PMX parser integration — first browser prototype</li>
+<li class="done">PMX parser integration — experimental browser prototype</li>
+<li class="done">ZIP package import — first prototype</li>
 <li class="done">Interactive 3D preview — first browser prototype</li>
 <li>Automatic Humanoid bone mapping — planned</li>
 <li>Manual bone mapping editor — planned</li>
@@ -64,7 +66,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <section class="card">
 <h2>4. Known limitations</h2>
 <ul>
-<li>PMX textures must be selected separately if the browser cannot resolve their original paths.</li>
+<li>ZIP import extracts one PMX plus common texture assets, but texture path matching and legacy formats still need model-by-model validation.</li>
 <li>PMX physics, IK animation playback, toon rendering, and every MMD-specific material feature are not guaranteed in this preview.</li>
 <li>No Humanoid mapping, pose editing, or VRM export is implemented yet.</li>
 </ul>
@@ -75,9 +77,10 @@ ul{padding-left:21px}.done{color:#23633b}
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
+import JSZip from 'jszip';
 
 const $ = id => document.getElementById(id);
-const input = $('pmx'), textureInput = $('textures'), state = $('state');
+const input = $('pmx'), zipInput = $('zip'), textureInput = $('textures'), state = $('state');
 const viewport = $('viewport'), empty = $('empty');
 let renderer, scene, camera, controls, currentModel = null, skeletonHelper = null;
 let textureUrls = [], textureMap = new Map(), showBones = false;
@@ -141,19 +144,25 @@ function frameModel(object) {
   camera.updateProjectionMatrix();
   controls.target.set(0, 0, 0); controls.update();
 }
-function normalizeName(s) {
+function normalizePath(s) {
   try { s = decodeURIComponent(s); } catch(e) {}
-  return s.replace(/\\/g, '/').split('/').pop().toLocaleLowerCase();
+  return s.replace(/\\\\/g, '/').replace(/^\\.\\//, '').toLocaleLowerCase();
 }
-textureInput.addEventListener('change', () => {
+function normalizeName(s) { return normalizePath(s).split('/').pop(); }
+function clearTextureUrls() {
   textureUrls.forEach(URL.revokeObjectURL);
   textureUrls = []; textureMap.clear();
+}
+function addTextureBlob(path, blob) {
+  const url = URL.createObjectURL(blob);
+  textureUrls.push(url);
+  textureMap.set(normalizePath(path), url);
+  textureMap.set(normalizeName(path), url);
+}
+textureInput.addEventListener('change', () => {
+  clearTextureUrls();
   const files = Array.from(textureInput.files || []);
-  for (const file of files) {
-    const url = URL.createObjectURL(file); textureUrls.push(url);
-    textureMap.set(normalizeName(file.name), url);
-    if (file.webkitRelativePath) textureMap.set(normalizeName(file.webkitRelativePath), url);
-  }
+  for (const file of files) addTextureBlob(file.webkitRelativePath || file.name, file);
   $('textureCount').textContent = String(files.length);
 });
 $('reset').addEventListener('click', () => { if (currentModel) frameModel(currentModel); });
@@ -162,48 +171,72 @@ $('skeleton').addEventListener('click', () => {
   showBones = !showBones; skeletonHelper.visible = showBones;
   $('skeleton').textContent = showBones ? 'Hide skeleton' : 'Show skeleton';
 });
-input.addEventListener('change', async () => {
-  const file = input.files && input.files[0];
-  if (!file) return;
+async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
   initViewer(); clearModel(); empty.style.display = 'grid';
-  setStatus('Reading PMX file…');
-  $('fileName').textContent = file.name;
-  $('fileSize').textContent = (file.size / 1048576).toFixed(2) + ' MB';
+  setStatus('Preparing model and textures…');
+  $('fileName').textContent = displayName;
+  $('fileSize').textContent = (sourceSize / 1048576).toFixed(2) + ' MB';
   $('meshCount').textContent = '—'; $('materialCount').textContent = '—'; $('boneCount').textContent = '—';
   $('details').textContent = 'Loading the MMD parser and reading model data…';
   try {
-    const buffer = await file.arrayBuffer();
+    if (zipEntries.length) {
+      clearTextureUrls();
+      for (const entry of zipEntries) addTextureBlob(entry.name, await entry.async('blob'));
+      $('textureCount').textContent = String(zipEntries.length);
+    }
     const manager = new THREE.LoadingManager();
-    manager.setURLModifier(url => {
-      const key = normalizeName(url);
-      return textureMap.get(key) || url;
-    });
+    manager.setURLModifier(url => textureMap.get(normalizePath(url)) || textureMap.get(normalizeName(url)) || url);
     manager.onError = url => setStatus('Model parsed; a texture could not be loaded: ' + normalizeName(url), '');
     const loader = new MMDLoader(manager);
     setStatus('Parsing PMX…');
-    const model = loader.parse(buffer, '');
+    const model = loader.parse(buffer, displayName);
     if (!model || !model.isSkinnedMesh) throw new Error('The parser did not return a valid skinned MMD mesh.');
-    currentModel = model;
-    scene.add(model);
+    currentModel = model; scene.add(model);
     skeletonHelper = new THREE.SkeletonHelper(model);
     skeletonHelper.visible = false; scene.add(skeletonHelper);
     showBones = false; $('skeleton').textContent = 'Show skeleton'; $('skeleton').disabled = false;
     empty.style.display = 'none'; frameModel(model);
-    let meshes = 0, materials = 0, bones = 0;
+    let meshes = 0, materials = 0;
     model.traverse(obj => {
       if (obj.isMesh) { meshes++; materials += Array.isArray(obj.material) ? obj.material.length : (obj.material ? 1 : 0); }
     });
-    if (model.skeleton) bones = model.skeleton.bones.length;
     $('meshCount').textContent = String(meshes);
     $('materialCount').textContent = String(materials);
-    $('boneCount').textContent = String(bones);
+    $('boneCount').textContent = String(model.skeleton ? model.skeleton.bones.length : 0);
     $('details').textContent = 'PMX data parsed. This preview does not yet validate rig quality, skin weights, IK, physics, or VRM compatibility.';
     setStatus('PMX parsed — preview ready', 'good');
   } catch (err) {
     console.error(err);
     setStatus('Could not parse this PMX file', 'bad');
-    $('details').textContent = (err && err.message ? err.message : String(err)) + ' Check that the file is a valid PMX and try again. If it uses external textures, select those files above.';
+    $('details').textContent = (err && err.message ? err.message : String(err)) + ' Check that the file is a valid PMX. Some texture formats may not be supported in this preview yet.';
     empty.style.display = 'grid';
+  }
+}
+input.addEventListener('change', async () => {
+  const file = input.files && input.files[0]; if (!file) return;
+  zipInput.value = '';
+  await renderPmx(await file.arrayBuffer(), file.name, file.size);
+});
+zipInput.addEventListener('change', async () => {
+  const file = zipInput.files && zipInput.files[0]; if (!file) return;
+  input.value = ''; textureInput.value = '';
+  setStatus('Opening ZIP package…');
+  $('fileName').textContent = file.name;
+  $('fileSize').textContent = (file.size / 1048576).toFixed(2) + ' MB';
+  try {
+    const archive = await JSZip.loadAsync(file);
+    const entries = Object.values(archive.files).filter(x => !x.dir);
+    const pmxFiles = entries.filter(x => /\.pmx$/i.test(x.name));
+    if (!pmxFiles.length) throw new Error('No .pmx file was found inside this ZIP archive.');
+    if (pmxFiles.length > 1) throw new Error('More than one PMX file was found. Please use a ZIP containing only one PMX model.');
+    const textureEntries = entries.filter(x => /\.(png|jpe?g|bmp|tga|spa|sph)$/i.test(x.name));
+    setStatus('Extracting PMX and ' + textureEntries.length + ' texture assets…');
+    const buffer = await pmxFiles[0].async('arraybuffer');
+    await renderPmx(buffer, pmxFiles[0].name.split('/').pop(), file.size, textureEntries);
+  } catch (err) {
+    console.error(err);
+    setStatus('Could not read ZIP package', 'bad');
+    $('details').textContent = err && err.message ? err.message : String(err);
   }
 });
 </script>
