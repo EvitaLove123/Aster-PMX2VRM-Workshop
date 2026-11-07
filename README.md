@@ -14,16 +14,16 @@ Android-first project scaffold for a browser-based PMX to VRM 0.x workflow.
 - VRM 0.x export
 - Android Chrome and GitHub Pages support
 
-## Compatibility targets
+## Technical targets
 
-- VRM 0.x
+- VRM 0.x format
 - UniVRM 0.106.0-compatible metadata
-- AlwaysUnlit and MToon materials
-- VRM Posing Mobile
-- Napharmonia
-- Virtual Droid
+- AlwaysUnlit and MToon material support
+- Preserve textures, materials, and model appearance
+- Preserve facial expressions and blendshape data where conversion is supported
+- Support secondary animation data, including spring bones and colliders, where conversion is supported
 
-These are targets, not verified compatibility claims. Every export must be tested with the target applications and representative models.
+These are development targets, not verified compatibility claims. Output files must pass structural validation and be tested with independent VRM viewers and tools.
 
 ## Current repository contents
 
@@ -33,12 +33,26 @@ These are targets, not verified compatibility claims. Every export must be teste
 ## Planned development phases
 
 1. Validate PMX parsing and texture loading on Android Chrome.
-2. Inspect skeleton hierarchy, source bone names, and bind pose.
-3. Implement automatic Humanoid mapping and a manual mapping editor.
+2. Inspect skeleton hierarchy, source bone names, bind pose, and model scale.
+3. Implement automatic Humanoid mapping, including finger bones, and a manual mapping editor.
 4. Analyze arm pose and implement safe, reversible A-pose to T-pose adjustments.
-5. Convert materials, textures, expressions, and secondary animation data.
-6. Implement VRM 0.x export and structural validation.
-7. Test exported files in VRM Posing Mobile, Napharmonia, and Virtual Droid.
+5. Convert materials, textures, facial expressions, and blendshape data.
+6. Convert supported secondary animation data, including spring bones and colliders.
+7. Implement VRM 0.x export and structural validation.
+8. Test exported files with independent VRM viewers, validators, and representative models.
+
+## Export validation checklist
+
+- Required VRM metadata and Humanoid bone assignments
+- Valid skeleton hierarchy and bind pose
+- Valid skin weights and mesh deformation
+- Texture references and material settings
+- Facial expression and blendshape references
+- Secondary animation and collider references
+- Consistent model orientation, scale, and floor placement
+- No missing mesh data or broken references
+
+A successful structural check does not guarantee that every application will interpret every model identically.
 
 ## Safety and model integrity
 
