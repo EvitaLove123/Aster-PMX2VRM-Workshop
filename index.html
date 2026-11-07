@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5f7fc">
+<title>Aster PMX2VRM Workshop</title>
+<style>
+:root{color-scheme:light;--bg:#f5f7fc;--panel:#fff;--ink:#1e2a3b;--muted:#68778c;--line:#e3e9f2;--blue:#5479b8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+header{padding:15px 18px;background:#fff;border-bottom:1px solid var(--line);font-weight:800;letter-spacing:.06em}
+main{max-width:900px;margin:24px auto;padding:0 14px 40px}.hero{padding:8px 2px 18px}.hero small{color:var(--blue);font-weight:800;letter-spacing:.14em}.hero h1{font-size:clamp(27px,6vw,42px);line-height:1.1;margin:8px 0}.hero p{color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 8px 28px #2439570c}
+.drop{border:2px dashed #aabbd4;border-radius:14px;padding:22px 12px;text-align:center;background:#f9fbff}
+input{max-width:100%;margin-top:12px}.status{display:inline-block;border-radius:99px;background:#fff4df;color:#855b16;padding:5px 10px;font-size:12px;font-weight:800}
+button{border:0;border-radius:11px;background:var(--blue);color:white;font-weight:700;padding:12px 16px;margin:12px 6px 0 0;min-height:44px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f6f8fc;border:1px solid var(--line);border-radius:12px;padding:12px;max-height:300px;overflow:auto}
+.note{font-size:13px;color:var(--muted)}#preview{height:280px;border-radius:12px;background:#edf2fa;display:grid;place-items:center;color:var(--muted);text-align:center;padding:16px}
+</style>
+</head>
+<body>
+<header>✦ ASTER WORKSHOP <span style="font-weight:500;color:#68778c">/ PMX2VRM · MOBILE EDITION</span></header>
+<main>
+<section class="hero"><small>MMD CONVERSION WORKBENCH</small><h1>PMX → VRM 0.x</h1><p>An Android-first workspace for inspecting MMD models and preparing a verified VRM conversion pipeline.</p></section>
+<section class="card">
+<h2>1. Import PMX</h2>
+<div class="drop"><strong>Choose a PMX model</strong><br><input id="pmx" type="file" accept=".pmx,application/octet-stream"><p class="note">Select the PMX file. Keep its texture files available on your device.</p></div>
+<p><span class="status" id="state">Waiting for a model</span></p>
+<div id="preview">3D preview will appear after the PMX loader is validated and connected.</div>
+</section>
+<section class="card">
+<h2>2. Conversion pipeline</h2>
+<ul>
+<li>PMX parsing and model inspection — integration test pending</li>
+<li>Automatic Humanoid bone mapping — planned</li>
+<li>Automatic A-pose to T-pose with manual correction — planned</li>
+<li>VRM 0.x export and metadata — planned</li>
+<li>Expressions, materials, SpringBone and colliders — planned</li>
+</ul>
+<p class="note">This build is a project scaffold, not a working PMX-to-VRM converter. Do not use it to export production models yet.</p>
+</section>
+<section class="card">
+<h2>3. Compatibility targets</h2>
+<p>VRM 0.x · UniVRM 0.106.0 metadata · AlwaysUnlit / MToon · VRM Posing Mobile · Napharmonia · Virtual Droid</p>
+<p class="note">Compatibility must be tested with real model files in each target application. No successful export is claimed at this stage.</p>
+</section>
+<p class="note" style="text-align:center">ASTER PMX2VRM WORKSHOP · Android-first · English UI</p>
+</main>
+<script>
+const input=document.getElementById('pmx'),state=document.getElementById('state');
+input.addEventListener('change',()=>{const f=input.files&&input.files[0];if(!f)return;state.textContent='Selected: '+f.name+' ('+(f.size/1048576).toFixed(2)+' MB)';});
+</script>
+</body></html>
