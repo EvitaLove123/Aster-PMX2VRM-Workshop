@@ -54,7 +54,7 @@ A successful structural check does not guarantee that every application will int
 
 - The current prototype does not export VRM files.
 - Humanoid mapping and pose editing are not implemented.
-- PMX textures may need to be selected separately; filename matching is best-effort.
+- ZIP import currently expects exactly one PMX file per archive. Texture matching is best-effort by archive path and filename.
 - Full MMD toon shading, IK animation, physics, and all PMX material extensions are not guaranteed in the preview.
 - The page loads Three.js modules from a CDN, so an internet connection is required.
 
