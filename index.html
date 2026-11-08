@@ -304,7 +304,7 @@ const boneAliases = {
   rightFoot:['rightfoot','footr','右足首','右足首d','右足先','bip001rfoot','bip01rfoot']
 };
 function compactBoneName(value) {
-  return String(value || '').toLowerCase().replace(/[\\s_・.\-:]/g,'');
+  return String(value || '').toLowerCase().replace(/[\s_・.\-:]/g,'');
 }
 function scoreBoneForSlot(boneName, slot) {
   const name = compactBoneName(boneName);
