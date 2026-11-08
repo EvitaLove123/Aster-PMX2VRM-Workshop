@@ -523,8 +523,10 @@ $('downloadGlb').addEventListener('click', async () => {
     setTimeout(() => URL.revokeObjectURL(url), 10000);
     $('exportStatus').textContent = 'GLB generated ('+(blob.size/1048576).toFixed(2)+' MB). If Android did not start the download, check Chrome Downloads and allow downloads for this site. This is a preview GLB, not a VRM avatar.';
   } catch (error) {
-    console.error(error);
-    $('exportStatus').textContent = 'GLB export failed: '+(error && error.message ? error.message : String(error));
+    console.error('GLB export diagnostic:', error);
+    const message = error && error.message ? error.message : String(error);
+    const stack = error && error.stack ? error.stack.split('\n').slice(0,5).join(' | ') : 'No stack trace available';
+    $('exportStatus').textContent = 'GLB export failed: ' + message + ' — Details: ' + stack;
   } finally {
     button.disabled = false;
   }
