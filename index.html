@@ -468,28 +468,57 @@ function updateMetadataSummary() {
   $('metadataSummary').textContent = 'Prepared metadata: '+($('metaName').value.trim() || 'Untitled model')+' · v'+($('metaVersion').value.trim() || '1.0')+' · Author: '+($('metaAuthor').value.trim() || 'Not specified')+'. Not embedded in a downloadable VRM yet.';
 }
 updateMetadataSummary();
-$('downloadGlb').addEventListener('click', () => {
+$('downloadGlb').addEventListener('click', async () => {
   if (!currentModel) { $('exportStatus').textContent = 'Load a PMX model first.'; return; }
-  $('downloadGlb').disabled = true;
-  $('exportStatus').textContent = 'Building GLB preview…';
-  const exporter = new GLTFExporter();
-  exporter.parse(currentModel, result => {
-    try {
-      const blob = new Blob([result], {type:'model/gltf-binary'});
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      const base = ($('metaName').value.trim() || sourceModelFileName || 'Aster_Model').replace(/[^a-z0-9_-]+/gi,'_');
-      anchor.href = url; anchor.download = base+'_Preview.glb';
-      document.body.appendChild(anchor); anchor.click(); anchor.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-      $('exportStatus').textContent = 'GLB preview download started. This is a GLB file, not a VRM avatar.';
-    } catch (error) {
-      console.error(error); $('exportStatus').textContent = 'GLB download failed: '+(error.message || error);
-    } finally { $('downloadGlb').disabled = false; }
-  }, error => {
-    console.error(error); $('exportStatus').textContent = 'GLB export failed: '+(error.message || error);
-    $('downloadGlb').disabled = false;
-  }, {binary:true, onlyVisible:true});
+  const button = $('downloadGlb');
+  button.disabled = true;
+  $('exportStatus').textContent = 'Preparing a GLB-compatible copy…';
+  let exportRoot = null;
+  try {
+    exportRoot = currentModel.clone(true);
+    exportRoot.name = $('metaName').value.trim() || sourceModelFileName || 'Aster_Model';
+    exportRoot.traverse(obj => {
+      if (!obj.isMesh) return;
+      obj.frustumCulled = false;
+      const convert = material => {
+        const standard = new THREE.MeshStandardMaterial({
+          name: material.name || 'PMX Material',
+          color: material.color ? material.color.clone() : new THREE.Color(0xffffff),
+          map: material.map || null,
+          alphaMap: material.alphaMap || null,
+          transparent: !!material.transparent,
+          opacity: material.opacity == null ? 1 : material.opacity,
+          side: material.side == null ? THREE.DoubleSide : material.side,
+          roughness: 0.85,
+          metalness: 0
+        });
+        if (material.emissive) standard.emissive.copy(material.emissive);
+        if (material.emissiveMap) standard.emissiveMap = material.emissiveMap;
+        if (material.vertexColors) standard.vertexColors = true;
+        return standard;
+      };
+      obj.material = Array.isArray(obj.material) ? obj.material.map(convert) : convert(obj.material || {});
+    });
+    exportRoot.updateMatrixWorld(true);
+    $('exportStatus').textContent = 'Converting model and textures to GLB…';
+    const exporter = new GLTFExporter();
+    const result = await exporter.parseAsync(exportRoot, {binary:true, onlyVisible:true});
+    if (!(result instanceof ArrayBuffer)) throw new Error('Exporter did not return a binary GLB file.');
+    const blob = new Blob([result], {type:'model/gltf-binary'});
+    if (!blob.size) throw new Error('The generated GLB file is empty.');
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const base = ($('metaName').value.trim() || sourceModelFileName || 'Aster_Model').replace(/[^a-z0-9_-]+/gi,'_');
+    anchor.href = url; anchor.download = base+'_Preview.glb';
+    anchor.style.display = 'none'; document.body.appendChild(anchor); anchor.click(); anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    $('exportStatus').textContent = 'GLB generated ('+(blob.size/1048576).toFixed(2)+' MB). If Android did not start the download, check Chrome Downloads and allow downloads for this site. This is a preview GLB, not a VRM avatar.';
+  } catch (error) {
+    console.error(error);
+    $('exportStatus').textContent = 'GLB export failed: '+(error && error.message ? error.message : String(error));
+  } finally {
+    button.disabled = false;
+  }
 });
 
 
