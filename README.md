@@ -31,7 +31,7 @@ Android-first browser project for inspecting MMD PMX models and preparing a futu
 1. Test PMX parsing and texture loading with representative models on Android Chrome.
 2. Improve texture path resolution and report missing texture references.
 3. Inspect skeleton hierarchy, source bone names, bind pose, model scale, and mesh deformation.
-4. Expand Humanoid mapping with finger bones, improve Japanese/English/MMD alias coverage, and validate parent-child hierarchy.
+4. Improve Japanese/English/MMD finger-bone alias coverage and validate parent-child hierarchy.
 5. Analyze arm pose and implement safe, reversible A-pose to T-pose adjustments.
 6. Convert materials, textures, facial expressions, and blendshape data.
 7. Convert supported secondary animation data, including spring bones and colliders.
