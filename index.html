@@ -481,7 +481,14 @@ $('downloadGlb').addEventListener('click', async () => {
   $('exportStatus').textContent = 'Preparing a GLB-compatible copy…';
   let exportRoot = null;
   try {
-    exportRoot = cloneSkeleton(currentModel);
+    // SkeletonHelper is a visualization-only child and must not be cloned/exported.
+    const helperParent = skeletonHelper && skeletonHelper.parent ? skeletonHelper.parent : null;
+    if (helperParent) helperParent.remove(skeletonHelper);
+    try {
+      exportRoot = cloneSkeleton(currentModel);
+    } finally {
+      if (helperParent && skeletonHelper) helperParent.add(skeletonHelper);
+    }
     exportRoot.name = $('metaName').value.trim() || sourceModelFileName || 'Aster_Model';
     exportRoot.traverse(obj => {
       if (!obj.isMesh) return;
