@@ -85,6 +85,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <h2>5. VRM Export</h2>
 <p class="note">Export targets are shown here, but downloads remain locked until the corresponding VRM serializer, metadata, humanoid, materials, and validation steps are implemented. The current preview/mapping data is not yet a valid VRM file.</p>
 <div class="map-tools">
+<button id="downloadGlb" type="button" disabled>Download Preview GLB</button>
 <button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
 <button id="exportVrm1" type="button" disabled>Download VRM 1.0</button>
 </div>
@@ -118,6 +119,7 @@ ul{padding-left:21px}.done{color:#23633b}
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import JSZip from 'jszip';
 
 const $ = id => document.getElementById(id);
@@ -161,6 +163,7 @@ function initViewer() {
   renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
 }
 function clearModel() {
+  $('downloadGlb').disabled = true;
   if (!currentModel) return;
   scene.remove(currentModel);
   currentModel.traverse(obj => {
@@ -286,6 +289,7 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     currentModel.updateMatrixWorld(true);
     showBones = false; $('skeleton').textContent = 'Show skeleton'; $('skeleton').disabled = false;
     empty.style.display = 'none'; frameModel(currentModel);
+    $('downloadGlb').disabled = false;
     let meshes = 0, materials = 0;
     model.traverse(obj => {
       if (obj.isMesh) { meshes++; materials += Array.isArray(obj.material) ? obj.material.length : (obj.material ? 1 : 0); }
@@ -464,6 +468,30 @@ function updateMetadataSummary() {
   $('metadataSummary').textContent = 'Prepared metadata: '+($('metaName').value.trim() || 'Untitled model')+' · v'+($('metaVersion').value.trim() || '1.0')+' · Author: '+($('metaAuthor').value.trim() || 'Not specified')+'. Not embedded in a downloadable VRM yet.';
 }
 updateMetadataSummary();
+$('downloadGlb').addEventListener('click', () => {
+  if (!currentModel) { $('exportStatus').textContent = 'Load a PMX model first.'; return; }
+  $('downloadGlb').disabled = true;
+  $('exportStatus').textContent = 'Building GLB preview…';
+  const exporter = new GLTFExporter();
+  exporter.parse(currentModel, result => {
+    try {
+      const blob = new Blob([result], {type:'model/gltf-binary'});
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      const base = ($('metaName').value.trim() || sourceModelFileName || 'Aster_Model').replace(/[^a-z0-9_-]+/gi,'_');
+      anchor.href = url; anchor.download = base+'_Preview.glb';
+      document.body.appendChild(anchor); anchor.click(); anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      $('exportStatus').textContent = 'GLB preview download started. This is a GLB file, not a VRM avatar.';
+    } catch (error) {
+      console.error(error); $('exportStatus').textContent = 'GLB download failed: '+(error.message || error);
+    } finally { $('downloadGlb').disabled = false; }
+  }, error => {
+    console.error(error); $('exportStatus').textContent = 'GLB export failed: '+(error.message || error);
+    $('downloadGlb').disabled = false;
+  }, {binary:true, onlyVisible:true});
+});
+
 
 input.addEventListener('change', async () => {
   const file = input.files && input.files[0]; if (!file) return;
