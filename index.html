@@ -38,6 +38,12 @@ ul{padding-left:21px}.done{color:#23633b}
 <div id="viewport"><div class="empty" id="empty">Your 3D model preview will appear here.<br>Choose a PMX file to begin.</div></div>
 <button id="reset" class="secondary" type="button">Reset camera</button><button id="skeleton" class="secondary" type="button" disabled>Show skeleton</button>
 <p class="note">Touch-drag to orbit · Pinch to zoom · Two-finger drag to pan. The preview is local to this browser session.</p>
+<div class="field" style="margin-top:12px">
+<strong>Download 3D Preview (GLB)</strong>
+<p class="note">Load a PMX or ZIP first. When the 3D model appears above, this button becomes available. This downloads a preview GLB, not a VRM avatar.</p>
+<button id="downloadGlb" type="button" disabled>Download Preview GLB</button>
+<div class="map-summary" id="exportStatus">Waiting for a PMX model to load.</div>
+</div>
 </section>
 <section class="card">
 <h2>2. Model inspection</h2>
@@ -85,11 +91,10 @@ ul{padding-left:21px}.done{color:#23633b}
 <h2>5. VRM Export</h2>
 <p class="note">Export targets are shown here, but downloads remain locked until the corresponding VRM serializer, metadata, humanoid, materials, and validation steps are implemented. The current preview/mapping data is not yet a valid VRM file.</p>
 <div class="map-tools">
-<button id="downloadGlb" type="button" disabled>Download Preview GLB</button>
 <button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
 <button id="exportVrm1" type="button" disabled>Download VRM 1.0</button>
 </div>
-<div class="map-summary" id="exportStatus">Not available yet — exporter implementation is pending.</div>
+<div class="map-summary">VRM downloads are not available yet. The VRM serializer and validation pipeline are still under development. The GLB preview download is located directly below the 3D viewer in section 1.</div>
 </section>
 <section class="card">
 <h2>6. Conversion pipeline</h2>
