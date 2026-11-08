@@ -505,10 +505,13 @@ $('downloadGlb').addEventListener('click', async () => {
       };
       obj.material = Array.isArray(obj.material) ? obj.material.map(convert) : convert(obj.material || {});
     });
-    exportRoot.updateMatrixWorld(true);
+    const exportScene = new THREE.Group();
+    exportScene.name = 'Aster_GL B_Preview'.replace(/\s+/g, '');
+    exportScene.add(exportRoot);
+    exportScene.updateMatrixWorld(true);
     $('exportStatus').textContent = 'Converting model and textures to GLB…';
     const exporter = new GLTFExporter();
-    const result = await exporter.parseAsync(exportRoot, {binary:true, onlyVisible:true});
+    const result = await exporter.parseAsync(exportScene, {binary:true, onlyVisible:true});
     if (!(result instanceof ArrayBuffer)) throw new Error('Exporter did not return a binary GLB file.');
     const blob = new Blob([result], {type:'model/gltf-binary'});
     if (!blob.size) throw new Error('The generated GLB file is empty.');
