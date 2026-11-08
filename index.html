@@ -61,14 +61,23 @@ ul{padding-left:21px}.done{color:#23633b}
 <div class="map-summary" id="mapSummary">Load a PMX model to inspect and map its humanoid bones.</div>
 <div class="mapping-list" id="mappingList"></div>
 </section>
+<section class="card" id="exportCard">
+<h2>4. VRM Export</h2>
+<p class="note">Export targets are shown here, but downloads remain locked until the corresponding VRM serializer, metadata, humanoid, materials, and validation steps are implemented. The current preview/mapping data is not yet a valid VRM file.</p>
+<div class="map-tools">
+<button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
+<button id="exportVrm1" type="button" disabled>Download VRM 1.0</button>
+</div>
+<div class="map-summary" id="exportStatus">Not available yet — exporter implementation is pending.</div>
+</section>
 <section class="card">
-<h2>4. Conversion pipeline</h2>
+<h2>5. Conversion pipeline</h2>
 <ul>
 <li class="done">PMX parser integration — experimental browser prototype</li>
 <li class="done">ZIP package import — first prototype</li>
 <li class="done">Interactive 3D preview — first browser prototype</li>
 <li class="done">Humanoid mapping editor — first prototype</li>
-<li class="done">Automatic and manual mapping for core humanoid bones — first prototype</li>
+<li class="done">Automatic and manual mapping for core body and finger humanoid bones — first prototype</li>
 <li>Safe A-pose to T-pose adjustment — planned</li>
 <li>VRM 0.x export and metadata — planned</li>
 <li>Expressions, materials, SpringBone and colliders conversion — planned</li>
@@ -76,11 +85,11 @@ ul{padding-left:21px}.done{color:#23633b}
 <p class="note">This is an early PMX inspection prototype, not a PMX-to-VRM converter. Parsing and preview must still be tested with representative PMX models on Android Chrome.</p>
 </section>
 <section class="card">
-<h2>5. Known limitations</h2>
+<h2>6. Known limitations</h2>
 <ul>
 <li>ZIP import extracts one PMX plus common texture assets, but texture path matching and legacy formats still need model-by-model validation.</li>
 <li>PMX physics, IK animation playback, toon rendering, and every MMD-specific material feature are not guaranteed in this preview.</li>
-<li>Humanoid mapping currently covers core body bones only. Finger mapping, pose editing, expressions, physics conversion, and VRM export are not implemented yet.</li>
+<li>Humanoid mapping includes core body and finger roles, but pose editing, expressions, physics conversion, and VRM export are not implemented yet.</li>
 </ul>
 </section>
 <p class="note" style="text-align:center">ASTER PMX2VRM WORKSHOP · Android-first · English UI</p>
@@ -264,7 +273,7 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     sourceBones = model.skeleton ? model.skeleton.bones : [];
     buildMappingEditor();
     autoMapBones();
-    $('details').textContent = 'PMX data parsed. Core Humanoid mapping is available as a preparation tool; it does not yet validate skin weights, IK, physics, or VRM compatibility.';
+    $('details').textContent = 'PMX data parsed. Core-body and finger Humanoid mapping are available as preparation tools; they do not yet validate skin weights, IK, physics, or VRM compatibility.';
     setStatus('PMX parsed — preview ready', 'good');
   } catch (err) {
     console.error(err);
@@ -280,7 +289,13 @@ const humanoidSlots = [
   ['leftShoulder','Left Shoulder'],['leftUpperArm','Left Upper Arm'],['leftLowerArm','Left Lower Arm'],['leftHand','Left Hand'],
   ['rightShoulder','Right Shoulder'],['rightUpperArm','Right Upper Arm'],['rightLowerArm','Right Lower Arm'],['rightHand','Right Hand'],
   ['leftUpperLeg','Left Upper Leg'],['leftLowerLeg','Left Lower Leg'],['leftFoot','Left Foot'],
-  ['rightUpperLeg','Right Upper Leg'],['rightLowerLeg','Right Lower Leg'],['rightFoot','Right Foot']
+  ['rightUpperLeg','Right Upper Leg'],['rightLowerLeg','Right Lower Leg'],['rightFoot','Right Foot'],
+  ...['Thumb','Index','Middle','Ring','Little'].flatMap(finger =>
+    ['Proximal','Intermediate','Distal'].flatMap(segment => [
+      ['left'+finger+segment,'Left '+finger+' '+segment],
+      ['right'+finger+segment,'Right '+finger+' '+segment]
+    ])
+  )
 ];
 const boneAliases = {
   hips:['hips','pelvis','root','センター','下半身','腰','骨盤','bip001pelvis','bip01pelvis'],
@@ -301,7 +316,37 @@ const boneAliases = {
   leftFoot:['leftfoot','footl','左足首','左足首d','左足先','bip001lfoot','bip01lfoot'],
   rightUpperLeg:['rightupperleg','rightupleg','rightthigh','thighr','rupleg','右足','右脚','bip001rthigh','bip01rthigh'],
   rightLowerLeg:['rightlowerleg','rightleg','rightcalf','calfr','右ひざ','右膝','右足ひざ','bip001rcalf','bip01rcalf'],
-  rightFoot:['rightfoot','footr','右足首','右足首d','右足先','bip001rfoot','bip01rfoot']
+  rightFoot:['rightfoot','footr','右足首','右足首d','右足先','bip001rfoot','bip01rfoot'],
+  leftThumbProximal:['leftthumbproximal','thumb01l','lthumb1','親指０１','左親指０１','左親指１'],
+  leftThumbIntermediate:['leftthumbintermediate','thumb02l','lthumb2','親指０２','左親指０２','左親指２'],
+  leftThumbDistal:['leftthumbdistal','thumb03l','lthumb3','親指０３','左親指０３','左親指３'],
+  rightThumbProximal:['rightthumbproximal','thumb01r','rthumb1','親指０１','右親指０１','右親指１'],
+  rightThumbIntermediate:['rightthumbintermediate','thumb02r','rthumb2','親指０２','右親指０２','右親指２'],
+  rightThumbDistal:['rightthumbdistal','thumb03r','rthumb3','親指０３','右親指０３','右親指３'],
+  leftIndexProximal:['leftindexproximal','index01l','lindex1','人指０１','左人指０１','左人指１','IndexProximal_L_1'],
+  leftIndexIntermediate:['leftindexintermediate','index02l','lindex2','人指０２','左人指０２','左人指２'],
+  leftIndexDistal:['leftindexdistal','index03l','lindex3','人指０３','左人指０３','左人指３'],
+  rightIndexProximal:['rightindexproximal','index01r','rindex1','右人指０１','右人指１','IndexProximal_R_1'],
+  rightIndexIntermediate:['rightindexintermediate','index02r','rindex2','右人指０２','右人指２'],
+  rightIndexDistal:['rightindexdistal','index03r','rindex3','右人指０３','右人指３'],
+  leftMiddleProximal:['leftmiddleproximal','middle01l','lmiddle1','中指０１','左中指０１'],
+  leftMiddleIntermediate:['leftmiddleintermediate','middle02l','lmiddle2','中指０２','左中指０２'],
+  leftMiddleDistal:['leftmiddledistal','middle03l','lmiddle3','中指０３','左中指０３'],
+  rightMiddleProximal:['rightmiddleproximal','middle01r','rmiddle1','右中指０１'],
+  rightMiddleIntermediate:['rightmiddleintermediate','middle02r','rmiddle2','右中指０２'],
+  rightMiddleDistal:['rightmiddledistal','middle03r','rmiddle3','右中指０３'],
+  leftRingProximal:['leftringproximal','ring01l','lring1','薬指０１','左薬指０１'],
+  leftRingIntermediate:['leftringintermediate','ring02l','lring2','薬指０２','左薬指０２'],
+  leftRingDistal:['leftringdistal','ring03l','lring3','薬指０３','左薬指０３'],
+  rightRingProximal:['rightringproximal','ring01r','rring1','右薬指０１'],
+  rightRingIntermediate:['rightringintermediate','ring02r','rring2','右薬指０２'],
+  rightRingDistal:['rightringdistal','ring03r','rring3','右薬指０３'],
+  leftLittleProximal:['leftlittleproximal','little01l','pinky01l','llittle1','小指０１','左小指０１'],
+  leftLittleIntermediate:['leftlittleintermediate','little02l','pinky02l','llittle2','小指０２','左小指０２'],
+  leftLittleDistal:['leftlittledistal','little03l','pinky03l','llittle3','小指０３','左小指０３'],
+  rightLittleProximal:['rightlittleproximal','little01r','pinky01r','rlittle1','右小指０１'],
+  rightLittleIntermediate:['rightlittleintermediate','little02r','pinky02r','rlittle2','右小指０２'],
+  rightLittleDistal:['rightlittledistal','little03r','pinky03r','rlittle3','右小指０３']
 };
 function compactBoneName(value) {
   return String(value || '').toLowerCase().replace(/[\s_・.\-:]/g,'');
