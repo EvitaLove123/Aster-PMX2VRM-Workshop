@@ -125,6 +125,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import JSZip from 'jszip';
 
 const $ = id => document.getElementById(id);
@@ -480,7 +481,7 @@ $('downloadGlb').addEventListener('click', async () => {
   $('exportStatus').textContent = 'Preparing a GLB-compatible copy…';
   let exportRoot = null;
   try {
-    exportRoot = currentModel.clone(true);
+    exportRoot = cloneSkeleton(currentModel);
     exportRoot.name = $('metaName').value.trim() || sourceModelFileName || 'Aster_Model';
     exportRoot.traverse(obj => {
       if (!obj.isMesh) return;
