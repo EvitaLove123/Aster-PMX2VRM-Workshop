@@ -16,12 +16,13 @@ Android-first browser project for inspecting MMD PMX models and preparing a futu
 
 ## Current implementation
 
-- `index.html` — mobile-friendly interface with PMX file selection
+- `index.html` — mobile-friendly interface with PMX/ZIP import, 3D preview, and an early core-body Humanoid mapping editor
 - Three.js scene, camera, lighting, grid, and touch-friendly OrbitControls
 - MMDLoader integration for parsing PMX data in the browser
 - Optional selection of external texture files, matched by filename
 - Interactive model preview and basic mesh, material, and bone counts
 - Optional skeleton helper overlay
+- First Humanoid mapping editor for 19 core body roles, with automatic suggestions and manual dropdown correction
 
 **Testing status:** The code has been committed, but it has not yet been verified against the user's PMX files or on Android Chrome. Some MMD material, toon, IK, physics, and texture-path behavior may differ between models. Treat this as an experimental preview until tested.
 
@@ -30,7 +31,7 @@ Android-first browser project for inspecting MMD PMX models and preparing a futu
 1. Test PMX parsing and texture loading with representative models on Android Chrome.
 2. Improve texture path resolution and report missing texture references.
 3. Inspect skeleton hierarchy, source bone names, bind pose, model scale, and mesh deformation.
-4. Implement automatic Humanoid mapping, including finger bones, and a manual mapping editor.
+4. Expand Humanoid mapping with finger bones, improve Japanese/English/MMD alias coverage, and validate parent-child hierarchy.
 5. Analyze arm pose and implement safe, reversible A-pose to T-pose adjustments.
 6. Convert materials, textures, facial expressions, and blendshape data.
 7. Convert supported secondary animation data, including spring bones and colliders.
