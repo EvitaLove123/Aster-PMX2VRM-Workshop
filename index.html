@@ -61,8 +61,28 @@ ul{padding-left:21px}.done{color:#23633b}
 <div class="map-summary" id="mapSummary">Load a PMX model to inspect and map its humanoid bones.</div>
 <div class="mapping-list" id="mappingList"></div>
 </section>
+<section class="card" id="metadataCard">
+<h2>4. Model information &amp; permissions</h2>
+<p class="note">Edit the model metadata that will be written into the VRM file when export is implemented. These fields do not alter the original PMX.</p>
+<div class="grid">
+<div class="field"><label for="metaName">Model name</label><input id="metaName" type="text" placeholder="Model name"></div>
+<div class="field"><label for="metaVersion">Version</label><input id="metaVersion" type="text" value="1.0" placeholder="1.0"></div>
+<div class="field"><label for="metaAuthor">Author</label><input id="metaAuthor" type="text" placeholder="Author name"></div>
+<div class="field"><label for="metaContact">Contact</label><input id="metaContact" type="text" placeholder="Email or website"></div>
+</div>
+<div class="field" style="margin-top:10px"><label for="metaReference">Reference / Credit URL</label><input id="metaReference" type="text" placeholder="https://..."></div>
+<div class="grid" style="margin-top:10px">
+<div class="field"><label for="metaAllowed">Allowed user</label><select id="metaAllowed"><option value="Everyone">Everyone</option><option value="ExplicitlyLicensedPerson">Only licensed users</option><option value="OnlyAuthor">Only author</option></select></div>
+<div class="field"><label for="metaLicense">License</label><select id="metaLicense"><option value="Redistribution_Prohibited">Redistribution prohibited</option><option value="CC0">CC0</option><option value="CC_BY">CC BY</option><option value="CC_BY_NC">CC BY-NC</option><option value="CC_BY_NC_SA">CC BY-NC-SA</option><option value="Other">Other</option></select></div>
+<div class="field"><label for="metaCommercial">Commercial use</label><select id="metaCommercial"><option value="Disallow">Disallow</option><option value="Allow">Allow</option></select></div>
+<div class="field"><label for="metaViolent">Violent use</label><select id="metaViolent"><option value="Disallow">Disallow</option><option value="Allow">Allow</option></select></div>
+<div class="field"><label for="metaSexual">Sexual use</label><select id="metaSexual"><option value="Disallow">Disallow</option><option value="Allow">Allow</option></select></div>
+<div class="field"><label for="metaOther">Other permissions / URL</label><input id="metaOther" type="text" placeholder="Optional"></div>
+</div>
+<div class="map-summary" id="metadataSummary">Metadata is editable; it will be embedded after the VRM exporter is implemented.</div>
+</section>
 <section class="card" id="exportCard">
-<h2>4. VRM Export</h2>
+<h2>5. VRM Export</h2>
 <p class="note">Export targets are shown here, but downloads remain locked until the corresponding VRM serializer, metadata, humanoid, materials, and validation steps are implemented. The current preview/mapping data is not yet a valid VRM file.</p>
 <div class="map-tools">
 <button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
@@ -71,7 +91,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <div class="map-summary" id="exportStatus">Not available yet — exporter implementation is pending.</div>
 </section>
 <section class="card">
-<h2>5. Conversion pipeline</h2>
+<h2>6. Conversion pipeline</h2>
 <ul>
 <li class="done">PMX parser integration — experimental browser prototype</li>
 <li class="done">ZIP package import — first prototype</li>
@@ -85,7 +105,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <p class="note">This is an early PMX inspection prototype, not a PMX-to-VRM converter. Parsing and preview must still be tested with representative PMX models on Android Chrome.</p>
 </section>
 <section class="card">
-<h2>6. Known limitations</h2>
+<h2>7. Known limitations</h2>
 <ul>
 <li>ZIP import extracts one PMX plus common texture assets, but texture path matching and legacy formats still need model-by-model validation.</li>
 <li>PMX physics, IK animation playback, toon rendering, and every MMD-specific material feature are not guaranteed in this preview.</li>
@@ -106,6 +126,7 @@ const viewport = $('viewport'), empty = $('empty');
 let renderer, scene, camera, controls, currentModel = null, skeletonHelper = null;
 let textureUrls = [], textureMap = new Map(), showBones = false;
 let sourceBones = [], humanoidMapping = {};
+let sourceModelFileName = '';
 
 function setStatus(message, kind='') {
   state.textContent = message;
@@ -205,7 +226,9 @@ $('skeleton').addEventListener('click', () => {
 async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
   initViewer(); clearModel(); empty.style.display = 'grid';
   setStatus('Preparing model and textures…');
+  sourceModelFileName = displayName.replace(/\.pmx$/i,'');
   $('fileName').textContent = displayName;
+  if (!$('metaName').value.trim()) $('metaName').value = sourceModelFileName;
   $('fileSize').textContent = (sourceSize / 1048576).toFixed(2) + ' MB';
   $('meshCount').textContent = '—'; $('materialCount').textContent = '—'; $('boneCount').textContent = '—';
   $('details').textContent = 'Loading the MMD parser and reading model data…';
@@ -351,19 +374,39 @@ const boneAliases = {
 function compactBoneName(value) {
   return String(value || '').toLowerCase().replace(/[\s_・.\-:]/g,'');
 }
+function getSlotAliases(slot) {
+  const aliases = [...(boneAliases[slot] || [])];
+  const side = slot.startsWith('left') ? 'left' : slot.startsWith('right') ? 'right' : '';
+  const sideJa = side === 'left' ? '左' : side === 'right' ? '右' : '';
+  const finger = slot.includes('Thumb') ? 'Thumb' : slot.includes('Index') ? 'Index' : slot.includes('Middle') ? 'Middle' : slot.includes('Ring') ? 'Ring' : slot.includes('Little') ? 'Little' : '';
+  const segment = slot.endsWith('Proximal') ? 1 : slot.endsWith('Intermediate') ? 2 : slot.endsWith('Distal') ? 3 : 0;
+  if (finger && segment) {
+    const en = {Thumb:'thumb',Index:'index',Middle:'middle',Ring:'ring',Little:'little'}[finger];
+    const ja = {Thumb:'親指',Index:'人指',Middle:'中指',Ring:'薬指',Little:'小指'}[finger];
+    const n = String(segment), nn = '0'+n;
+    aliases.push(side+finger+'Proximal',side+finger+'Intermediate',side+finger+'Distal');
+    aliases.push(side+en+n,side+en+nn,en+n+(side==='left'?'L':'R'),en+nn+(side==='left'?'L':'R'));
+    aliases.push(sideJa+ja+n,sideJa+ja+nn,sideJa+ja+'０'+n,sideJa+ja+'０'+(segment-1),sideJa+ja+(segment-1));
+    aliases.push(sideJa+ja+'０'+segment,sideJa+ja+segment);
+    aliases.push(finger+'Proximal_'+(side==='left'?'L':'R')+'_1');
+  }
+  return aliases;
+}
 function scoreBoneForSlot(boneName, slot) {
-  const name = compactBoneName(boneName);
-  const aliases = boneAliases[slot] || [];
+  const original = String(boneName || '');
+  const name = compactBoneName(original);
   let best = 0;
-  for (const aliasRaw of aliases) {
+  for (const aliasRaw of getSlotAliases(slot)) {
     const alias = compactBoneName(aliasRaw);
     if (name === alias) best = Math.max(best, 100);
-    else if (alias.length > 3 && name.includes(alias)) best = Math.max(best, 78);
+    else if (alias.length > 5 && name.includes(alias)) best = Math.max(best, 78);
   }
-  const left = /left|(^|[^a-z])l([^a-z]|$)|左/.test(String(boneName).toLowerCase());
-  const right = /right|(^|[^a-z])r([^a-z]|$)|右/.test(String(boneName).toLowerCase());
+  const lower = original.toLowerCase();
+  const left = /left|左|(?:^|[_ .-])l(?:$|[_ .-])/.test(lower);
+  const right = /right|右|(?:^|[_ .-])r(?:$|[_ .-])/.test(lower);
   if (slot.startsWith('left') && right) best = 0;
   if (slot.startsWith('right') && left) best = 0;
+  if ((slot.startsWith('left') || slot.startsWith('right')) && !left && !right && !/[左右]/.test(original)) best = 0;
   return best;
 }
 function buildMappingEditor() {
@@ -413,6 +456,14 @@ function autoMapBones() {
 }
 $('autoMap').addEventListener('click', autoMapBones);
 $('clearMap').addEventListener('click', () => { humanoidMapping = {}; buildMappingEditor(); });
+for (const id of ['metaName','metaVersion','metaAuthor','metaContact','metaReference','metaAllowed','metaLicense','metaCommercial','metaViolent','metaSexual','metaOther']) {
+  $(id).addEventListener('input', updateMetadataSummary);
+  $(id).addEventListener('change', updateMetadataSummary);
+}
+function updateMetadataSummary() {
+  $('metadataSummary').textContent = 'Prepared metadata: '+($('metaName').value.trim() || 'Untitled model')+' · v'+($('metaVersion').value.trim() || '1.0')+' · Author: '+($('metaAuthor').value.trim() || 'Not specified')+'. Not embedded in a downloadable VRM yet.';
+}
+updateMetadataSummary();
 
 input.addEventListener('change', async () => {
   const file = input.files && input.files[0]; if (!file) return;
