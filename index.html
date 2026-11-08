@@ -132,17 +132,24 @@ function clearModel() {
   $('skeleton').disabled = true;
 }
 function frameModel(object) {
+  object.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  object.position.sub(center);
-  const maxDim = Math.max(size.x, size.y, size.z, 1);
-  const distance = maxDim * 1.8;
-  camera.position.set(distance * 0.65, distance * 0.45, distance * 1.2);
-  camera.near = Math.max(0.01, maxDim / 1000);
-  camera.far = maxDim * 100;
+  const height = Math.max(size.y, 1);
+  const width = Math.max(size.x, size.z, 1);
+  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+  const distance = Math.max(
+    height / (2 * Math.tan(verticalFov / 2)),
+    width / (2 * Math.tan(horizontalFov / 2))
+  ) * 1.35;
+  camera.position.set(center.x, center.y + height * 0.12, center.z + distance);
+  camera.near = Math.max(0.01, distance / 1000);
+  camera.far = Math.max(2000, distance * 100);
   camera.updateProjectionMatrix();
-  controls.target.set(0, 0, 0); controls.update();
+  controls.target.copy(center);
+  controls.update();
 }
 function normalizePath(s) {
   try { s = decodeURIComponent(s); } catch(e) {}
@@ -214,11 +221,26 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     if (!model || !model.isSkinnedMesh || !model.geometry || !model.skeleton) {
       throw new Error('MMDLoader did not produce a valid skinned PMX model.');
     }
-    currentModel = model; scene.add(model);
+    // Center the actual skinned preview and place its lowest point on the grid.
+    // Keep the imported PMX mesh and its bind pose untouched inside a preview group.
+    model.updateMatrixWorld(true);
+    if (typeof model.computeBoundingBox === 'function') model.computeBoundingBox();
+    const modelBounds = model.boundingBox
+      ? model.boundingBox.clone().applyMatrix4(model.matrixWorld)
+      : new THREE.Box3().setFromObject(model);
+    if (modelBounds.isEmpty()) throw new Error('The PMX model has no measurable geometry bounds.');
+    const modelCenter = modelBounds.getCenter(new THREE.Vector3());
+    const previewRoot = new THREE.Group();
+    previewRoot.name = 'PMX_Preview_Centering';
+    previewRoot.add(model);
+    previewRoot.position.set(-modelCenter.x, -modelBounds.min.y, -modelCenter.z);
+    currentModel = previewRoot;
+    scene.add(currentModel);
     skeletonHelper = new THREE.SkeletonHelper(model);
-    skeletonHelper.visible = false; scene.add(skeletonHelper);
+    skeletonHelper.visible = false; currentModel.add(skeletonHelper);
+    currentModel.updateMatrixWorld(true);
     showBones = false; $('skeleton').textContent = 'Show skeleton'; $('skeleton').disabled = false;
-    empty.style.display = 'none'; frameModel(model);
+    empty.style.display = 'none'; frameModel(currentModel);
     let meshes = 0, materials = 0;
     model.traverse(obj => {
       if (obj.isMesh) { meshes++; materials += Array.isArray(obj.material) ? obj.material.length : (obj.material ? 1 : 0); }
