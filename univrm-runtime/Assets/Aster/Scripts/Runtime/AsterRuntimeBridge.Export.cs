@@ -31,6 +31,7 @@ namespace Aster.PMX2VRM
             public string other;
         }
 
+        [UnityEngine.Scripting.Preserve]
         public void ExportVrm0(string metadataJson)
         {
             try
@@ -69,6 +70,7 @@ namespace Aster.PMX2VRM
             }
         }
 
+        [UnityEngine.Scripting.Preserve]
         public void ExportVrm1(string metadataJson)
         {
             try
