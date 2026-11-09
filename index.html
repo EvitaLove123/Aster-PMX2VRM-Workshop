@@ -96,10 +96,9 @@ ul{padding-left:21px}.done{color:#23633b}
 </div>
 <div class="map-summary">The official runtime must finish loading and validate the Humanoid Avatar before either export button becomes available. The GLB preview download remains available in section 1.</div>
 </section>
-</section>
 <section class="card" id="runtimeCard">
 <h2>UniVRM Runtime</h2>
-<p class="note">Official UniVRM WebGL runtime. Wait for the runtime handshake before exporting. The Unity player runs in this panel.</p>
+<p class="note">Official UniVRM WebGL runtime. First deployment requires a Unity license secret in GitHub Actions and GitHub Pages set to Actions. The Unity player runs in this panel.</p>
 <div class="map-summary" id="runtimeStatus">Waiting for the official UniVRM WebGL runtime…</div>
 <iframe id="univrmRuntime" title="Aster official UniVRM runtime" src="./univrm-runtime/Build/WebGL/index.html" style="width:100%;height:360px;border:1px solid var(--line);border-radius:12px;background:#f4f7fb" allow="fullscreen"></iframe>
 </section>
@@ -512,7 +511,7 @@ for (const id of ['metaName','metaVersion','metaAuthor','metaContact','metaRefer
   $(id).addEventListener('change', updateMetadataSummary);
 }
 function updateMetadataSummary() {
-  $('metadataSummary').textContent = 'Prepared metadata: '+($('metaName').value.trim() || 'Untitled model')+' · v'+($('metaVersion').value.trim() || '1.0')+' · Author: '+($('metaAuthor').value.trim() || 'Not specified')+'. Not embedded in a downloadable VRM yet.';
+  $('metadataSummary').textContent = 'Prepared metadata: '+($('metaName').value.trim() || 'Untitled model')+' · v'+($('metaVersion').value.trim() || '1.0')+' · Author: '+($('metaAuthor').value.trim() || 'Not specified')+'. Ready to embed in the official UniVRM export.';
 }
 updateMetadataSummary();
 
