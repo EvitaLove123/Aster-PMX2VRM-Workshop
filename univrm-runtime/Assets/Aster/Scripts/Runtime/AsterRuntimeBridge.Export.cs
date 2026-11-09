@@ -143,7 +143,7 @@ namespace Aster.PMX2VRM
                 throw new Exception("GLB declared length does not match the exported file size.");
 
             var jsonLength = BitConverter.ToUInt32(bytes, 12);
-            if (BitConverter.ToUInt32(bytes, 16) != 0x4E4F534A || jsonLength > bytes.Length - 20)
+            if (BitConverter.ToUInt32(bytes, 16) != 0x4E4F534A || jsonLength > (uint)(bytes.Length - 20))
                 throw new Exception("GLB JSON chunk header is invalid.");
             var json = Encoding.UTF8.GetString(bytes, 20, (int)jsonLength);
             var extensionKey = "\"" + expectedExtension + "\"";
