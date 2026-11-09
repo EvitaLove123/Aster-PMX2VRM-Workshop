@@ -403,7 +403,6 @@ function getSlotAliases(slot) {
     english + (segment === 1 ? 'proximal' : segment === 2 ? 'intermediate' : 'distal') + side,
     finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal') + '_' + side,
     finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal') + '_' + side + '_1',
-    'finger' + nn + '_' + side,
     jaSide + japanese + (finger === 'Thumb' ? String(segment - 1) : n),
     jaSide + japanese + (finger === 'Thumb' ? String(segment - 1).padStart(2,'0') : nn),
     jaSide + japanese + (finger === 'Thumb' ? String(segment - 1) : n)
