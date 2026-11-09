@@ -400,6 +400,8 @@ function getSlotAliases(slot) {
   const aliases = [
     slot, side + finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal'),
     english + nn + side, english + n + side,
+    side.toLowerCase() + english + nn, side.toLowerCase() + english + n,
+    side + finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal'),
     english + (segment === 1 ? 'proximal' : segment === 2 ? 'intermediate' : 'distal') + side,
     finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal') + '_' + side,
     finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal') + '_' + side + '_1',
@@ -413,8 +415,10 @@ function detectBoneSide(original) {
   const raw = String(original || '').toLowerCase();
   const leftSuffix = /(?:thumb|index|middle|ring|little|upperarm|lowerarm|forearm|shoulder|hand|thigh|calf|foot)[a-z0-9]*l$/;
   const rightSuffix = /(?:thumb|index|middle|ring|little|upperarm|lowerarm|forearm|shoulder|hand|thigh|calf|foot)[a-z0-9]*r$/;
-  if (/(^|[^a-z])left([^a-z]|$)|左/.test(raw) || /(?:^|[_ .-])l(?:$|[_ .-])/.test(raw) || /_(?:l)(?:_|$)/.test(raw) || /(?:^|[_ .-])l\d*$/.test(raw) || leftSuffix.test(raw)) return 'left';
-  if (/(^|[^a-z])right([^a-z]|$)|右/.test(raw) || /(?:^|[_ .-])r(?:$|[_ .-])/.test(raw) || /_(?:r)(?:_|$)/.test(raw) || /(?:^|[_ .-])r\d*$/.test(raw) || rightSuffix.test(raw)) return 'right';
+  const leftPrefix = /^l(?:thumb|index|middle|ring|little|upperarm|lowerarm|forearm|shoulder|hand|thigh|calf|foot)/;
+  const rightPrefix = /^r(?:thumb|index|middle|ring|little|upperarm|lowerarm|forearm|shoulder|hand|thigh|calf|foot)/;
+  if (/(^|[^a-z])left([^a-z]|$)|左/.test(raw) || /(?:^|[_ .-])l(?:$|[_ .-])/.test(raw) || /_(?:l)(?:_|$)/.test(raw) || /(?:^|[_ .-])l\d*$/.test(raw) || leftSuffix.test(raw) || leftPrefix.test(raw)) return 'left';
+  if (/(^|[^a-z])right([^a-z]|$)|右/.test(raw) || /(?:^|[_ .-])r(?:$|[_ .-])/.test(raw) || /_(?:r)(?:_|$)/.test(raw) || /(?:^|[_ .-])r\d*$/.test(raw) || rightSuffix.test(raw) || rightPrefix.test(raw)) return 'right';
   const compact = compactBoneName(raw);
   if (/left|左/.test(compact)) return 'left';
   if (/right|右/.test(compact)) return 'right';
