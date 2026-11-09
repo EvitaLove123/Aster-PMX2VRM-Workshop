@@ -2,12 +2,6 @@ name: Build and deploy Aster UniVRM WebGL runtime
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "univrm-runtime/**"
-      - "index.html"
-      - ".github/workflows/build-univrm-webgl.yml"
 
 permissions:
   contents: read
@@ -42,6 +36,7 @@ jobs:
           set -euo pipefail
           test -f univrm-runtime/Build/WebGL/index.html
           mkdir -p site/univrm-runtime/Build/WebGL
+          touch site/.nojekyll
           cp index.html site/index.html
           cp -R univrm-runtime/Build/WebGL/. site/univrm-runtime/Build/WebGL/
           python3 - <<'PY'
