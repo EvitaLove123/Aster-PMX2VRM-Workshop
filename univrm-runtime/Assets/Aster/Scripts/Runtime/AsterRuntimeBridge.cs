@@ -47,6 +47,11 @@ namespace Aster.PMX2VRM
             DontDestroyOnLoad(gameObject);
         }
 
+        private void Start()
+        {
+            PostStatus("runtime-ready", "Official UniVRM WebGL runtime is ready. Version 0.131.4.");
+        }
+
         public void BeginGlb(string fileName)
         {
             _glbBase64.Length = 0;
