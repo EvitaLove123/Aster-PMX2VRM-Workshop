@@ -58,11 +58,13 @@ namespace Aster.PMX2VRM
             PostStatus("runtime-ready", "Official UniVRM WebGL runtime is ready. Version 0.131.4.");
         }
 
+        [UnityEngine.Scripting.Preserve]
         public void AcknowledgeReady()
         {
             CancelInvoke(nameof(AnnounceRuntimeReady));
         }
 
+        [UnityEngine.Scripting.Preserve]
         public void BeginGlb(string fileName)
         {
             if (_glbBytes != null) _glbBytes.Dispose();
@@ -71,6 +73,7 @@ namespace Aster.PMX2VRM
             PostStatus("receiving", "Receiving GLB data from Workshop.");
         }
 
+        [UnityEngine.Scripting.Preserve]
         public void AppendGlbChunk(string chunk)
         {
             if (string.IsNullOrEmpty(chunk)) return;
@@ -78,6 +81,7 @@ namespace Aster.PMX2VRM
             _glbBytes.Write(decoded, 0, decoded.Length);
         }
 
+        [UnityEngine.Scripting.Preserve]
         public async void FinishGlbImport(string mappingJson)
         {
             try
