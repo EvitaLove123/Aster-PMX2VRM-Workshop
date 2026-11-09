@@ -47,13 +47,13 @@ Runtime source includes:
 
 The repository includes `.github/workflows/build-univrm-webgl.yml` using GameCI.
 
-1. If you do not already have a Unity Personal `.ulf` license file, run **Request Unity Personal activation file** in the Actions tab and download its artifact.
-2. Upload the `.alf` artifact at [license.unity3d.com](https://license.unity3d.com/) and download the resulting `.ulf` file.
-3. Add `UNITY_LICENSE` (the full `.ulf` contents), `UNITY_EMAIL`, and `UNITY_PASSWORD` as repository Actions secrets in **Settings → Secrets and variables → Actions**.
-4. Set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
-5. Run **Build and deploy Aster UniVRM WebGL runtime** from the Actions tab.
+1. Add the appropriate Unity license secrets in **Settings → Secrets and variables → Actions**. For Personal: `UNITY_LICENSE` (contents of an already activated `.ulf` file), `UNITY_EMAIL`, and `UNITY_PASSWORD`. For a Professional license: `UNITY_SERIAL`, `UNITY_EMAIL`, and `UNITY_PASSWORD`.
+2. Set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
+3. Run **Build and deploy Aster UniVRM WebGL runtime** from the Actions tab.
 
-Never commit Unity license files, passwords, or activation credentials. GameCI uses the three repository secrets to reactivate Unity in its cloud runner. The workflow will not build Unity until a valid license secret is available.
+**Personal-license limitation:** Unity's current documentation says Unity Hub is the supported activation method for Unity Personal; manual `.alf` activation is not supported. Since this project is being managed from Android, a valid Personal `.ulf` must already be available from a prior Hub activation, or the build needs access to a suitable licensed runner/seat.
+
+Never commit Unity license files, passwords, or activation credentials. GameCI uses the three repository secrets to reactivate Unity in its cloud runner. The workflow cannot build Unity until valid license credentials or an activated license file are available.
 
 ## Model integrity and known limitations
 
