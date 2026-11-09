@@ -144,7 +144,7 @@ let renderer, scene, camera, controls, currentModel = null, skeletonHelper = nul
 let textureUrls = [], textureMap = new Map(), showBones = false;
 let sourceBones = [], humanoidMapping = {};
 let sourceModelFileName = '';
-let runtimeReady = false, runtimeHumanoidReady = false, pendingRuntimeExport = null;
+let runtimeReady = false, runtimeHumanoidReady = false, pendingRuntimeExport = null, requestedRuntimeExport = null;
 
 function setStatus(message, kind='') {
   state.textContent = message;
@@ -306,6 +306,9 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     showBones = false; $('skeleton').textContent = 'Show skeleton'; $('skeleton').disabled = false;
     empty.style.display = 'none'; frameModel(currentModel);
     $('downloadGlb').disabled = false;
+    $('exportVrm0').disabled = !runtimeReady;
+    $('exportVrm1').disabled = !runtimeReady;
+    runtimeHumanoidReady = false;
     let meshes = 0, materials = 0;
     model.traverse(obj => {
       if (obj.isMesh) { meshes++; materials += Array.isArray(obj.material) ? obj.material.length : (obj.material ? 1 : 0); }
@@ -534,7 +537,7 @@ function sendGlbToRuntime(arrayBuffer) {
     .filter(item => item.boneName);
   const bytes = new Uint8Array(arrayBuffer);
   postRuntimeCall('BeginGlb', (sourceModelFileName || 'AsterModel') + '.glb');
-  const byteChunkSize = 49151; // divisible by three so independently encoded chunks concatenate safely
+  const byteChunkSize = 49152; // divisible by three so independently encoded chunks concatenate safely
   for (let offset = 0; offset < bytes.length; offset += byteChunkSize) {
     const end = Math.min(offset + byteChunkSize, bytes.length);
     let binary = '';
@@ -558,6 +561,12 @@ window.addEventListener('message', event => {
     $('exportVrm0').disabled = false;
     $('exportVrm1').disabled = false;
     $('runtimeStatus').textContent = 'Unity Humanoid Avatar validated. Official VRM exporters are ready.';
+    if (requestedRuntimeExport) {
+      const target = requestedRuntimeExport;
+      requestedRuntimeExport = null;
+      postRuntimeCall(target === '0.x' ? 'ExportVrm0' : 'ExportVrm1', JSON.stringify(getRuntimeMetadata()));
+      $('exportStatus').textContent = 'Calling official UniVRM ' + target + ' exporter…';
+    }
   }
   if (data.state === 'vrm0-exported' || data.state === 'vrm1-exported') {
     $('exportStatus').textContent = data.message || 'VRM file generated. Check Chrome Downloads.';
@@ -572,6 +581,12 @@ window.addEventListener('message', event => {
 function requestRuntimeExport(target) {
   if (!currentModel) { $('exportStatus').textContent = 'Load a PMX model first.'; return; }
   if (!runtimeReady) { $('exportStatus').textContent = 'The official UniVRM WebGL runtime is not ready. Wait for its status above.'; return; }
+  if (runtimeHumanoidReady) {
+    postRuntimeCall(target === '0.x' ? 'ExportVrm0' : 'ExportVrm1', JSON.stringify(getRuntimeMetadata()));
+    $('exportStatus').textContent = 'Calling official UniVRM ' + target + ' exporter…';
+    return;
+  }
+  requestedRuntimeExport = target;
   pendingRuntimeExport = target;
   $('exportStatus').textContent = 'Preparing GLB and Unity Humanoid import for VRM ' + target + '…';
   $('downloadGlb').click();
@@ -643,12 +658,11 @@ $('downloadGlb').addEventListener('click', async () => {
     $('exportStatus').textContent = 'GLB generated ('+(blob.size/1048576).toFixed(2)+' MB). If Android did not start the download, check Chrome Downloads and allow downloads for this site. This is a preview GLB, not a VRM avatar.';
   } catch (error) {
     console.error('GLB export diagnostic:', error);
+    pendingRuntimeExport = null;
+    requestedRuntimeExport = null;
     const message = error && error.message ? error.message : String(error);
     const stack = error && error.stack ? error.stack.split('\n').slice(0,5).join(' | ') : 'No stack trace available';
     $('exportStatus').textContent = 'GLB export failed: ' + message + ' — Details: ' + stack;
-  } catch (error) {
-    pendingRuntimeExport = null;
-    throw error;
   } finally {
     button.disabled = false;
   }
