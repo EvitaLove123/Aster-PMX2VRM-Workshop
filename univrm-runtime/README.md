@@ -22,18 +22,18 @@ The official UPM packages are pinned to the same UniVRM release tag in
 - [x] Runtime GLB import through official `UniGLTF.GltfUtility.LoadBytesAsync`
 - [x] Explicit role-to-node mapping into Unity `HumanDescription`
 - [x] Unity Humanoid Avatar creation and `isValid` / `isHuman` validation
-- [ ] Connect the Workshop UI to a deployed WebGL runtime
+- [x] Workshop browser bridge for chunked GLB and metadata transfer
+- [x] Browser download bridge for generated VRM files
+- [x] Runtime call to official VRM 0.x exporter (`VRM.VRMExporter.Export`)
+- [x] Runtime call to official VRM 1.0 exporter (`Vrm10Exporter.Export`)
+- [x] GitHub Actions workflow scaffold for Unity WebGL build and Pages deployment
+- [ ] Configure `UNITY_LICENSE` secret and run a successful cloud build
+- [ ] Deploy runtime and test the complete browser-to-Unity round trip
 - [ ] Test GLB import and AvatarBuilder with real PMX-derived models
-- [ ] Apply VRM 0.x metadata, expressions, materials and secondary animation
-- [ ] Export VRM 0.x through the official VRM exporter
-- [ ] Apply VRM 1.0 metadata, expressions, materials and spring settings
-- [ ] Export VRM 1.0 through the official Vrm10Exporter
-- [ ] Return the generated VRM file to the Workshop and verify it
+- [ ] Complete expressions, MMD materials, SpringBone, and collider conversion
+- [ ] Validate exported VRM 0.x and VRM 1.0 files in independent validators/apps
 
-**Important:** The GLB import and Unity Humanoid conversion source code is now present,
-but it has not yet been compiled or tested in the Unity Editor/WebGL build. The
-Workshop does not yet call this runtime. VRM 0.x and VRM 1.0 export are not implemented
-yet, and the HTML export buttons must remain disabled.
+**Important:** The GLB import, Unity Humanoid conversion, and official VRM 0.x/1.0 exporter call sites are present in source. They have not yet been compiled or tested in Unity/WebGL, so neither export format is considered verified. The browser bridge and export controls are wired, but require a successful deployed WebGL runtime before they can work. Do not treat source implementation as a successful build or a validated VRM.
 
 ## Browser bridge protocol
 
@@ -44,7 +44,7 @@ Workshop should send data to the Unity instance using `SendMessage`:
 2. One or more `AppendGlbChunk(base64Chunk)` calls.
 3. `FinishGlbImport(mappingJson)`
 
-The JSON mapping payload has this shape:
+The JSON payload has this shape. The runtime reads `mappings` for Humanoid construction and `metadata` for export:
 
 ```json
 {
@@ -52,13 +52,16 @@ The JSON mapping payload has this shape:
     { "slot": "hips", "boneName": "Hips" },
     { "slot": "spine", "boneName": "Spine" },
     { "slot": "leftThumbProximal", "boneName": "ThumbProximal_L" }
-  ]
+  ],
+  "metadata": {
+    "name": "Avatar", "version": "1.0", "author": "Creator",
+    "allowedUser": "Everyone", "license": "CC_BY",
+    "commercial": "Disallow", "violent": "Disallow", "sexual": "Disallow"
+  }
 }
 ```
 
-The `slot` value must match a Unity `HumanBodyBones` enum name (case-insensitive).
-The `boneName` must exactly match one unique node name in the imported GLB. Missing,
-duplicate, or ambiguous assignments are rejected instead of guessed.
+The `slot` value must match a Unity `HumanBodyBones` enum name (case-insensitive). The `boneName` must exactly match one unique node name in the imported GLB. Missing, duplicate, or ambiguous assignments are rejected instead of guessed. Legacy metadata values are translated to each VRM specification; some VRM 1.0 license concepts do not have a one-to-one equivalent in the current UI.
 
 ## Open in Unity
 
@@ -71,10 +74,19 @@ The Unity runtime bridge is created automatically when the player starts.
 
 ## Android/cloud workflow
 
-The Unity Editor and WebGL build cannot run inside Chrome on Android. A cloud CI
-runner can build this project, but it needs a valid Unity Editor installation and
-Unity license activation configured securely by the repository owner. Never commit
-Unity license files, passwords, or activation credentials.
+The Unity Editor and WebGL build cannot run inside Chrome on Android. The repository
+contains `.github/workflows/build-univrm-webgl.yml`, which uses GameCI to build the
+Unity project and deploys the Workshop plus runtime to GitHub Pages. Before the first
+successful run:
+
+1. Add a valid Unity Personal license file as the repository Actions secret named
+   `UNITY_LICENSE` (Repository Settings → Secrets and variables → Actions).
+2. Set GitHub Pages source to **GitHub Actions** (Repository Settings → Pages).
+3. Run the **Build and deploy Aster UniVRM WebGL runtime** workflow from the Actions tab.
+
+The workflow does not contain license credentials. Never commit Unity license files,
+passwords, or activation credentials. If the secret is absent or invalid, the build
+cannot activate Unity and will fail before compiling the runtime.
 
 ## Official references
 
