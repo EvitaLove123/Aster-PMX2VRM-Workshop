@@ -49,7 +49,18 @@ namespace Aster.PMX2VRM
 
         private void Start()
         {
+            // Repeat until the parent Workshop acknowledges the handshake.
+            InvokeRepeating(nameof(AnnounceRuntimeReady), 0.5f, 2f);
+        }
+
+        private void AnnounceRuntimeReady()
+        {
             PostStatus("runtime-ready", "Official UniVRM WebGL runtime is ready. Version 0.131.4.");
+        }
+
+        public void AcknowledgeReady()
+        {
+            CancelInvoke(nameof(AnnounceRuntimeReady));
         }
 
         public void BeginGlb(string fileName)
