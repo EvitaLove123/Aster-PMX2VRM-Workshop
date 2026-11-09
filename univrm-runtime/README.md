@@ -24,6 +24,7 @@ The official UPM packages are pinned to the same UniVRM release tag in
 - [x] Unity Humanoid Avatar creation and `isValid` / `isHuman` validation
 - [x] Workshop browser bridge for chunked GLB and metadata transfer
 - [x] Browser download bridge for generated VRM files
+- [x] Basic GLB header and expected VRM-extension check before download
 - [x] Runtime call to official VRM 0.x exporter (`VRM.VRMExporter.Export`)
 - [x] Runtime call to official VRM 1.0 exporter (`Vrm10Exporter.Export`)
 - [x] GitHub Actions workflow scaffold for Unity WebGL build and Pages deployment
