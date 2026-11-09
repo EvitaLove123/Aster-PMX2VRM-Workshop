@@ -8,13 +8,20 @@ namespace Aster.PMX2VRM.Editor
 {
     public static class AsterWebGLBuild
     {
+        // Unity Build Automation calls this method after scripts compile and
+        // before it starts its normal WebGL player build.
+        // Configure this method as the UBA Pre-export method:
+        // Aster.PMX2VRM.Editor.AsterWebGLBuild.PreExport
+        public static void PreExport()
+        {
+            ConfigureWebGLPlayer();
+            Debug.Log("Aster UniVRM: WebGL player settings prepared for Unity Build Automation.");
+        }
+
         [MenuItem("Aster/Build UniVRM WebGL Runtime")]
         public static void BuildWebGL()
         {
-            // Use gzip with Unity's JavaScript fallback because static GitHub Pages hosting
-            // may not send the Content-Encoding header Unity's compressed player expects.
-            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
-            PlayerSettings.WebGL.decompressionFallback = true;
+            ConfigureWebGLPlayer();
 
             const string output = "Build/WebGL";
             Directory.CreateDirectory(output);
@@ -35,6 +42,14 @@ namespace Aster.PMX2VRM.Editor
             }
 
             Debug.Log("Aster UniVRM WebGL build completed: " + report.summary.totalSize + " bytes");
+        }
+
+        private static void ConfigureWebGLPlayer()
+        {
+            // GitHub Pages/static hosting may not send Content-Encoding for
+            // compressed Unity files, so enable Unity's decompression fallback.
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = true;
         }
     }
 }
