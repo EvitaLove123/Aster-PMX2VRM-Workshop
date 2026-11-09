@@ -59,7 +59,7 @@ namespace Aster.PMX2VRM
 
                 var settings = new GltfExportSettings { InverseAxis = Axes.Z };
                 var exportingData = VRM.VRMExporter.Export(settings, root, new RuntimeTextureSerializer());
-                DeliverVrm(root.name + "_VRM0.vrm", exportingData.ToGlbBytes(), "vrm0-exported",
+                DeliverVrm(SafeFileName(ValueOr(meta.name, root.name)) + "_VRM0.vrm", exportingData.ToGlbBytes(), "vrm0-exported",
                     "Official UniVRM 0.x exporter completed.");
             }
             catch (Exception ex)
@@ -96,7 +96,7 @@ namespace Aster.PMX2VRM
                 };
                 var bytes = UniVRM10.Vrm10Exporter.Export(new GltfExportSettings(), root, null,
                     new RuntimeTextureSerializer(), meta);
-                DeliverVrm(root.name + "_VRM1.vrm", bytes, "vrm1-exported",
+                DeliverVrm(SafeFileName(ValueOr(data.name, root.name)) + "_VRM1.vrm", bytes, "vrm1-exported",
                     "Official UniVRM 1.0 exporter completed.");
             }
             catch (Exception ex)
@@ -127,6 +127,13 @@ namespace Aster.PMX2VRM
             Debug.Log("Generated " + fileName + " (" + bytes.Length + " bytes).");
 #endif
             PostStatus(state, message + " File size: " + bytes.Length + " bytes.");
+        }
+
+        private static string SafeFileName(string value)
+        {
+            foreach (var invalid in new[] { '/', '\\', ':', '*', '?', '"', '<', '>', '|' })
+                value = value.Replace(invalid, '_');
+            return value.Trim();
         }
 
         private static string ValueOr(string value, string fallback)
