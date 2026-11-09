@@ -20,6 +20,7 @@ namespace Aster.PMX2VRM
         private readonly StringBuilder _glbBase64 = new StringBuilder();
         private RuntimeGltfInstance _loadedGltf;
         private Avatar _builtAvatar;
+        private bool _humanoidReady;
         private string _pendingFileName = "AsterModel.glb";
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -67,6 +68,7 @@ namespace Aster.PMX2VRM
                 _glbBase64.Length = 0;
                 PostStatus("importing", "Importing GLB with official UniGLTF runtime API.");
 
+                _humanoidReady = false;
                 if (_loadedGltf != null)
                 {
                     Destroy(_loadedGltf.gameObject);
@@ -95,6 +97,7 @@ namespace Aster.PMX2VRM
                 var animator = _loadedGltf.Root.GetComponent<Animator>();
                 if (animator == null) animator = _loadedGltf.Root.AddComponent<Animator>();
                 animator.avatar = _builtAvatar;
+                _humanoidReady = true;
 
                 PostStatus("humanoid-ready",
                     "GLB imported. Unity Humanoid Avatar built and validated. VRM export is the next stage.");
