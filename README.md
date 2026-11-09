@@ -47,12 +47,12 @@ Runtime source includes:
 
 The repository includes `.github/workflows/build-univrm-webgl.yml` using GameCI.
 
-1. Add a valid Unity Personal license file as an Actions secret named `UNITY_LICENSE` in **Repository Settings → Secrets and variables → Actions**.
+1. Add the Unity license as an Actions secret named `UNITY_LICENSE`, plus `UNITY_EMAIL` and `UNITY_PASSWORD`, in **Repository Settings → Secrets and variables → Actions**.
 2. Set **Repository Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
 3. Open the **Actions** tab.
 4. Run **Build and deploy Aster UniVRM WebGL runtime**.
 
-Never commit Unity license files, passwords, or activation credentials. The workflow will not build Unity until a valid license secret is available.
+Never commit Unity license files, passwords, or activation credentials. GameCI uses the three repository secrets to reactivate Unity in its cloud runner. The workflow will not build Unity until a valid license secret is available.
 
 ## Model integrity and known limitations
 
