@@ -477,7 +477,7 @@ function buildMappingEditor() {
 }
 function updateMappingSummary() {
   const mapped = humanoidSlots.filter(([slot]) => Number.isInteger(humanoidMapping[slot])).length;
-  const required = ['hips','spine','chest','neck','head','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot'];
+  const required = ['hips','spine','head','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot'];
   const missing = required.filter(slot => !Number.isInteger(humanoidMapping[slot]));
   const used = humanoidSlots.map(([slot]) => humanoidMapping[slot]).filter(Number.isInteger);
   const duplicates = [...new Set(used.filter((value,index) => used.indexOf(value) !== index))];
