@@ -11,9 +11,9 @@ namespace Aster.PMX2VRM.Editor
         [MenuItem("Aster/Build UniVRM WebGL Runtime")]
         public static void BuildWebGL()
         {
-            // GitHub Pages does not provide Unity-specific Content-Encoding headers.
-            // Ship uncompressed WebGL assets so the generated player loads reliably.
-            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
+            // Use gzip with Unity's JavaScript fallback because static GitHub Pages hosting
+            // may not send the Content-Encoding header Unity's compressed player expects.
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
 
             const string output = "Build/WebGL";
