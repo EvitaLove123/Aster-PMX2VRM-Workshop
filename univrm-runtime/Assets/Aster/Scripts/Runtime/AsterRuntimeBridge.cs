@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.IO;
 using System.Threading.Tasks;
 using UniGLTF;
 using UnityEngine;
@@ -17,7 +17,7 @@ namespace Aster.PMX2VRM
     {
         public static AsterRuntimeBridge Instance { get; private set; }
 
-        private readonly StringBuilder _glbBase64 = new StringBuilder();
+        private MemoryStream _glbBytes = new MemoryStream();
         private RuntimeGltfInstance _loadedGltf;
         private Avatar _builtAvatar;
         private bool _humanoidReady;
@@ -54,23 +54,26 @@ namespace Aster.PMX2VRM
 
         public void BeginGlb(string fileName)
         {
-            _glbBase64.Length = 0;
+            if (_glbBytes != null) _glbBytes.Dispose();
+            _glbBytes = new MemoryStream();
             _pendingFileName = string.IsNullOrWhiteSpace(fileName) ? "AsterModel.glb" : fileName;
             PostStatus("receiving", "Receiving GLB data from Workshop.");
         }
 
         public void AppendGlbChunk(string chunk)
         {
-            if (!string.IsNullOrEmpty(chunk)) _glbBase64.Append(chunk);
+            if (string.IsNullOrEmpty(chunk)) return;
+            var decoded = Convert.FromBase64String(chunk);
+            _glbBytes.Write(decoded, 0, decoded.Length);
         }
 
         public async void FinishGlbImport(string mappingJson)
         {
             try
             {
-                if (_glbBase64.Length == 0) throw new Exception("No GLB data was received.");
-                var bytes = Convert.FromBase64String(_glbBase64.ToString());
-                _glbBase64.Length = 0;
+                if (_glbBytes == null || _glbBytes.Length == 0) throw new Exception("No GLB data was received.");
+                var bytes = _glbBytes.ToArray();
+                _glbBytes.SetLength(0);
                 PostStatus("importing", "Importing GLB with official UniGLTF runtime API.");
 
                 _humanoidReady = false;
