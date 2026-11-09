@@ -95,3 +95,22 @@ build cannot activate Unity and will fail before compiling the runtime.
 - https://github.com/vrm-c/UniVRM
 - https://github.com/vrm-c/UniVRM/releases/tag/v0.131.4
 - https://github.com/vrm-c/UniVRM/blob/v0.131.4/Packages/UniGLTF/Runtime/UniGLTF/IO/GltfUtility.cs
+
+## Unity Build Automation compatibility
+
+The runtime now exposes a Unity Build Automation pre-export hook:
+
+`Aster.PMX2VRM.Editor.AsterWebGLBuild.PreExport`
+
+For a WebGL target, configure the target's **Project subfolder path** as
+`univrm-runtime`, select Unity `2022.3`, and set the **Pre-export method**
+to the fully qualified method above. The hook applies the WebGL gzip and
+decompression-fallback settings; Unity Build Automation performs the normal
+WebGL player build for the configured target. This avoids depending on the
+GameCI-specific `buildMethod` setting in the existing GitHub Actions workflow.
+
+Unity's documentation confirms that Build Automation supports WebGL, GitHub
+repositories, Unity 2022.3, project subfolders, and pre-export methods. However,
+the user's Unity Dashboard access and the licensing/entitlement path have not
+been verified. This repository change is preparation only: no cloud build has
+been run, and no VRM exporter output has been validated.
