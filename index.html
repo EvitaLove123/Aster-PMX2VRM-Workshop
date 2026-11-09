@@ -28,7 +28,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <body>
 <header>✦ ASTER WORKSHOP <span style="font-weight:500;color:#68778c">/ PMX2VRM · MOBILE EDITION</span></header>
 <main>
-<section class="hero"><small>MMD CONVERSION WORKBENCH</small><h1>PMX → VRM 0.x</h1><p>Import an MMD PMX model, inspect its 3D appearance, and prepare it for a verified conversion workflow.</p></section>
+<section class="hero"><small>MMD CONVERSION WORKBENCH</small><h1>PMX → VRM 0.x / 1.0</h1><p>Import an MMD PMX model, inspect its 3D appearance, and prepare it for a verified conversion workflow.</p></section>
 <section class="card">
 <h2>1. Import PMX</h2>
 <div class="drop"><strong>Option A — Import a complete ZIP package</strong><br><input id="zip" type="file" accept=".zip,application/zip"><p class="note">Recommended: select a ZIP containing one PMX and its texture folders. The workshop will locate the PMX and prepare texture assets automatically.</p></div>
@@ -69,7 +69,7 @@ ul{padding-left:21px}.done{color:#23633b}
 </section>
 <section class="card" id="metadataCard">
 <h2>4. Model information &amp; permissions</h2>
-<p class="note">Edit the model metadata that the official UniVRM exporters will embed. These fields do not alter the original PMX.</p>
+<p class="note">Edit the model metadata that the official UniVRM exporters will embed. VRM 1.0 has different permission categories, so a few legacy values are translated conservatively. These fields do not alter the original PMX.</p>
 <div class="grid">
 <div class="field"><label for="metaName">Model name</label><input id="metaName" type="text" placeholder="Model name"></div>
 <div class="field"><label for="metaVersion">Version</label><input id="metaVersion" type="text" value="1.0" placeholder="1.0"></div>
