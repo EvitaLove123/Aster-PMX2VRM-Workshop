@@ -11,7 +11,7 @@ namespace Aster.PMX2VRM
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")]
-        private static extern void AsterDownloadFile(string fileName, byte[] bytes, int length);
+        private static extern int AsterDownloadFile(string fileName, byte[] bytes, int length);
 #endif
         private VRM.VRMMetaObject _exportMeta0;
 
@@ -121,7 +121,8 @@ namespace Aster.PMX2VRM
             if (bytes == null || bytes.Length < 20)
                 throw new Exception("UniVRM returned an empty or invalid VRM byte array.");
 #if UNITY_WEBGL && !UNITY_EDITOR
-            AsterDownloadFile(fileName, bytes, bytes.Length);
+            if (AsterDownloadFile(fileName, bytes, bytes.Length) == 0)
+                throw new Exception("The browser rejected the generated VRM download.");
 #else
             Debug.Log("Generated " + fileName + " (" + bytes.Length + " bytes).");
 #endif
