@@ -19,6 +19,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: univrm-runtime/Library
+          key: unity-library-2022.3.0f1-webgl-${{ hashFiles('univrm-runtime/Assets/**', 'univrm-runtime/Packages/**', 'univrm-runtime/ProjectSettings/**') }}
+          restore-keys: |
+            unity-library-2022.3.0f1-webgl-
+
       - name: Build Unity WebGL with official UniVRM
         uses: game-ci/unity-builder@v4
         env:
