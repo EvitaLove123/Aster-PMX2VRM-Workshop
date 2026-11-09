@@ -69,7 +69,7 @@ ul{padding-left:21px}.done{color:#23633b}
 </section>
 <section class="card" id="metadataCard">
 <h2>4. Model information &amp; permissions</h2>
-<p class="note">Edit the model metadata that will be written into the VRM file when export is implemented. These fields do not alter the original PMX.</p>
+<p class="note">Edit the model metadata that the official UniVRM exporters will embed. These fields do not alter the original PMX.</p>
 <div class="grid">
 <div class="field"><label for="metaName">Model name</label><input id="metaName" type="text" placeholder="Model name"></div>
 <div class="field"><label for="metaVersion">Version</label><input id="metaVersion" type="text" value="1.0" placeholder="1.0"></div>
@@ -89,12 +89,19 @@ ul{padding-left:21px}.done{color:#23633b}
 </section>
 <section class="card" id="exportCard">
 <h2>5. VRM Export</h2>
-<p class="note">Export targets are shown here, but downloads remain locked until the corresponding VRM serializer, metadata, humanoid, materials, and validation steps are implemented. The current preview/mapping data is not yet a valid VRM file.</p>
+<p class="note">The Workshop sends the GLB preview and explicit Humanoid mappings to the official UniVRM runtime. Export is enabled only after Unity reports a valid Humanoid Avatar.</p>
 <div class="map-tools">
 <button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
 <button id="exportVrm1" type="button" disabled>Download VRM 1.0</button>
 </div>
-<div class="map-summary">VRM downloads are not available yet. The VRM serializer and validation pipeline are still under development. The GLB preview download is located directly below the 3D viewer in section 1.</div>
+<div class="map-summary">The official runtime must finish loading and validate the Humanoid Avatar before either export button becomes available. The GLB preview download remains available in section 1.</div>
+</section>
+</section>
+<section class="card" id="runtimeCard">
+<h2>UniVRM Runtime</h2>
+<p class="note">Official UniVRM WebGL runtime. Wait for the runtime handshake before exporting. The Unity player runs in this panel.</p>
+<div class="map-summary" id="runtimeStatus">Waiting for the official UniVRM WebGL runtime…</div>
+<iframe id="univrmRuntime" title="Aster official UniVRM runtime" src="./univrm-runtime/Build/WebGL/index.html" style="width:100%;height:360px;border:1px solid var(--line);border-radius:12px;background:#f4f7fb" allow="fullscreen"></iframe>
 </section>
 <section class="card">
 <h2>6. Conversion pipeline</h2>
@@ -104,10 +111,11 @@ ul{padding-left:21px}.done{color:#23633b}
 <li class="done">Interactive 3D preview — first browser prototype</li>
 <li class="done">Humanoid mapping editor — first prototype</li>
 <li class="done">Automatic and manual mapping for core body and finger humanoid bones — improved side-aware aliases</li>
-<li>Unity Humanoid AvatarBuilder pipeline — source implemented in the separate UniVRM runtime; awaiting Unity/WebGL build and model tests</li>
+<li>Unity Humanoid AvatarBuilder pipeline — implemented in the separate UniVRM runtime source; awaiting Unity/WebGL build and model tests</li>
+<li>Official UniVRM 0.x and 1.0 runtime exporter calls — implemented in the separate runtime source; awaiting Unity/WebGL compile and model tests</li>
 <li>Safe A-pose to T-pose adjustment — planned</li>
-<li>VRM 0.x export and metadata — planned</li>
-<li>Expressions, materials, SpringBone and colliders conversion — planned</li>
+<li>VRM 0.x metadata + official runtime export API — source implemented; validation pending</li>
+<li>Expressions, material conversion, SpringBone and colliders — further conversion/validation work required</li>
 </ul>
 <p class="note">This is an early PMX inspection prototype, not a PMX-to-VRM converter. Parsing and preview must still be tested with representative PMX models on Android Chrome.</p>
 </section>
@@ -116,7 +124,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <ul>
 <li>ZIP import extracts one PMX plus common texture assets, but texture path matching and legacy formats still need model-by-model validation.</li>
 <li>PMX physics, IK animation playback, toon rendering, and every MMD-specific material feature are not guaranteed in this preview.</li>
-<li>Humanoid mapping includes core body and finger roles. Unity Humanoid Avatar creation is implemented in the separate runtime source but is not yet connected to this page or tested in a Unity/WebGL build. Pose editing, expressions, physics conversion, and VRM export are not implemented yet.</li>
+<li>Humanoid mapping includes core body and finger roles. The page now has a browser bridge for the separate Unity runtime, but the runtime build must be deployed and tested before this workflow is usable. Expressions, MMD physics conversion, SpringBone authoring, and complete VRM validation remain unfinished.</li>
 </ul>
 </section>
 <p class="note" style="text-align:center">ASTER PMX2VRM WORKSHOP · Android-first · English UI</p>
@@ -136,6 +144,7 @@ let renderer, scene, camera, controls, currentModel = null, skeletonHelper = nul
 let textureUrls = [], textureMap = new Map(), showBones = false;
 let sourceBones = [], humanoidMapping = {};
 let sourceModelFileName = '';
+let runtimeReady = false, runtimeHumanoidReady = false, pendingRuntimeExport = null;
 
 function setStatus(message, kind='') {
   state.textContent = message;
@@ -497,6 +506,78 @@ function updateMetadataSummary() {
   $('metadataSummary').textContent = 'Prepared metadata: '+($('metaName').value.trim() || 'Untitled model')+' · v'+($('metaVersion').value.trim() || '1.0')+' · Author: '+($('metaAuthor').value.trim() || 'Not specified')+'. Not embedded in a downloadable VRM yet.';
 }
 updateMetadataSummary();
+
+function getRuntimeMetadata() {
+  return {
+    name: $('metaName').value.trim(),
+    version: $('metaVersion').value.trim(),
+    author: $('metaAuthor').value.trim(),
+    contact: $('metaContact').value.trim(),
+    reference: $('metaReference').value.trim(),
+    allowedUser: $('metaAllowed').value,
+    license: $('metaLicense').value,
+    commercial: $('metaCommercial').value,
+    violent: $('metaViolent').value,
+    sexual: $('metaSexual').value,
+    other: $('metaOther').value.trim()
+  };
+}
+function postRuntimeCall(method, value='') {
+  const frame = $('univrmRuntime');
+  if (!runtimeReady || !frame || !frame.contentWindow) throw new Error('Official UniVRM runtime is not ready yet.');
+  frame.contentWindow.postMessage({type:'aster-univrm-call', method, value}, location.origin);
+}
+function sendGlbToRuntime(arrayBuffer) {
+  const mappings = humanoidSlots
+    .filter(([slot]) => Number.isInteger(humanoidMapping[slot]))
+    .map(([slot]) => ({slot, boneName: sourceBones[humanoidMapping[slot]]?.name || ''}))
+    .filter(item => item.boneName);
+  const bytes = new Uint8Array(arrayBuffer);
+  postRuntimeCall('BeginGlb', (sourceModelFileName || 'AsterModel') + '.glb');
+  const byteChunkSize = 49151; // divisible by three so independently encoded chunks concatenate safely
+  for (let offset = 0; offset < bytes.length; offset += byteChunkSize) {
+    const end = Math.min(offset + byteChunkSize, bytes.length);
+    let binary = '';
+    for (let i = offset; i < end; i++) binary += String.fromCharCode(bytes[i]);
+    postRuntimeCall('AppendGlbChunk', btoa(binary));
+  }
+  postRuntimeCall('FinishGlbImport', JSON.stringify({mappings, metadata:getRuntimeMetadata()}));
+  $('runtimeStatus').textContent = 'GLB sent to Unity. Importing and building the Humanoid Avatar…';
+}
+window.addEventListener('message', event => {
+  const frame = $('univrmRuntime');
+  if (!frame || event.source !== frame.contentWindow || !event.data || event.data.source !== 'aster-univrm') return;
+  const data = event.data;
+  $('runtimeStatus').textContent = data.message || data.state;
+  if (data.state === 'runtime-ready') {
+    runtimeReady = true;
+    $('runtimeStatus').textContent = 'UniVRM ' + (data.univrmVersion || 'runtime') + ' ready. Load a PMX and prepare its mapping.';
+  }
+  if (data.state === 'humanoid-ready') {
+    runtimeHumanoidReady = true;
+    $('exportVrm0').disabled = false;
+    $('exportVrm1').disabled = false;
+    $('runtimeStatus').textContent = 'Unity Humanoid Avatar validated. Official VRM exporters are ready.';
+  }
+  if (data.state === 'vrm0-exported' || data.state === 'vrm1-exported') {
+    $('exportStatus').textContent = data.message || 'VRM file generated. Check Chrome Downloads.';
+  }
+  if (data.state === 'error') {
+    runtimeHumanoidReady = false;
+    $('exportVrm0').disabled = true;
+    $('exportVrm1').disabled = true;
+    $('runtimeStatus').textContent = 'Runtime error: ' + (data.message || 'Unknown error');
+  }
+});
+function requestRuntimeExport(target) {
+  if (!currentModel) { $('exportStatus').textContent = 'Load a PMX model first.'; return; }
+  if (!runtimeReady) { $('exportStatus').textContent = 'The official UniVRM WebGL runtime is not ready. Wait for its status above.'; return; }
+  pendingRuntimeExport = target;
+  $('exportStatus').textContent = 'Preparing GLB and Unity Humanoid import for VRM ' + target + '…';
+  $('downloadGlb').click();
+}
+$('exportVrm0').addEventListener('click', () => requestRuntimeExport('0.x'));
+$('exportVrm1').addEventListener('click', () => requestRuntimeExport('1.0'));
 $('downloadGlb').addEventListener('click', async () => {
   if (!currentModel) { $('exportStatus').textContent = 'Load a PMX model first.'; return; }
   const button = $('downloadGlb');
@@ -544,6 +625,13 @@ $('downloadGlb').addEventListener('click', async () => {
     const exporter = new GLTFExporter();
     const result = await exporter.parseAsync(exportScene, {binary:true, onlyVisible:true});
     if (!(result instanceof ArrayBuffer)) throw new Error('Exporter did not return a binary GLB file.');
+    if (pendingRuntimeExport) {
+      const target = pendingRuntimeExport;
+      pendingRuntimeExport = null;
+      $('exportStatus').textContent = 'Sending GLB to official UniVRM runtime for Humanoid conversion…';
+      sendGlbToRuntime(result);
+      return;
+    }
     const blob = new Blob([result], {type:'model/gltf-binary'});
     if (!blob.size) throw new Error('The generated GLB file is empty.');
     const url = URL.createObjectURL(blob);
@@ -558,6 +646,9 @@ $('downloadGlb').addEventListener('click', async () => {
     const message = error && error.message ? error.message : String(error);
     const stack = error && error.stack ? error.stack.split('\n').slice(0,5).join(' | ') : 'No stack trace available';
     $('exportStatus').textContent = 'GLB export failed: ' + message + ' — Details: ' + stack;
+  } catch (error) {
+    pendingRuntimeExport = null;
+    throw error;
   } finally {
     button.disabled = false;
   }
