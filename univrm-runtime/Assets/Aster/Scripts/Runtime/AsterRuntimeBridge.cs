@@ -182,7 +182,7 @@ namespace Aster.PMX2VRM
             var avatar = AvatarBuilder.BuildHumanAvatar(root, description);
             if (avatar == null || !avatar.isValid || !avatar.isHuman)
             {
-                if (avatar != null) Destroy(avatar);
+                if (avatar != null) UnityEngine.Object.Destroy(avatar);
                 throw new Exception("Unity rejected the Humanoid skeleton. Check bone hierarchy, required mappings, and T-pose orientation.");
             }
             avatar.name = root.name + "_HumanoidAvatar";
