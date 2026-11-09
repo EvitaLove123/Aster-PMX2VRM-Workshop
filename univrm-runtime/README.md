@@ -79,9 +79,11 @@ contains `.github/workflows/build-univrm-webgl.yml`, which uses GameCI to build 
 Unity project and deploys the Workshop plus runtime to GitHub Pages. Before the first
 successful run:
 
-1. Add `UNITY_LICENSE`, `UNITY_EMAIL`, and `UNITY_PASSWORD` as repository Actions secrets (Repository Settings → Secrets and variables → Actions). For Unity Personal, `UNITY_LICENSE` is the contents of the activated `.ulf` license file.
-2. Set GitHub Pages source to **GitHub Actions** (Repository Settings → Pages).
-3. Run the **Build and deploy Aster UniVRM WebGL runtime** workflow from the Actions tab.
+1. If you do not already have a Unity Personal `.ulf` license file, run **Request Unity Personal activation file** in the Actions tab and download its artifact.
+2. Upload the `.alf` artifact at [license.unity3d.com](https://license.unity3d.com/) and download the resulting `.ulf` file.
+3. Add `UNITY_LICENSE` (the full `.ulf` contents), `UNITY_EMAIL`, and `UNITY_PASSWORD` as repository Actions secrets (Settings → Secrets and variables → Actions).
+4. Set GitHub Pages source to **GitHub Actions** (Settings → Pages).
+5. Run the **Build and deploy Aster UniVRM WebGL runtime** workflow from the Actions tab.
 
 The workflow does not contain license credentials. Never commit Unity license files,
 passwords, or activation credentials. If any required secret is absent or invalid, the
