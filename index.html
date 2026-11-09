@@ -408,8 +408,7 @@ function getSlotAliases(slot) {
     jaSide + japanese + (finger === 'Thumb' ? String(segment - 1).padStart(2,'0') : nn),
     jaSide + japanese + (finger === 'Thumb' ? String(segment - 1) : n)
   ];
-  const oldAliases = boneAliases[slot] || [];
-  return [...new Set([...oldAliases, ...aliases])];
+  return [...new Set(aliases)];
 }
 function detectBoneSide(original) {
   const raw = String(original || '').toLowerCase();
