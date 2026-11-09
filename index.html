@@ -59,7 +59,7 @@ ul{padding-left:21px}.done{color:#23633b}
 </section>
 <section class="card" id="mappingCard">
 <h2>3. Humanoid mapping</h2>
-<p class="note">Map the PMX skeleton to standard VRM humanoid roles. Original PMX bone names remain unchanged. Mapping is a preparation step only; it does not export VRM yet.</p>
+<p class="note">Map the PMX skeleton to standard Unity/VRM Humanoid roles. Original PMX bone names remain unchanged. Finger matching supports Japanese full-width numbering and common L/R prefix/suffix conventions. Ambiguous generic Finger01 names are left unmapped rather than guessed.</p>
 <div class="map-tools">
 <button id="autoMap" type="button">Auto map bones</button>
 <button id="clearMap" class="secondary" type="button">Clear mapping</button>
@@ -103,7 +103,8 @@ ul{padding-left:21px}.done{color:#23633b}
 <li class="done">ZIP package import — first prototype</li>
 <li class="done">Interactive 3D preview — first browser prototype</li>
 <li class="done">Humanoid mapping editor — first prototype</li>
-<li class="done">Automatic and manual mapping for core body and finger humanoid bones — first prototype</li>
+<li class="done">Automatic and manual mapping for core body and finger humanoid bones — improved side-aware aliases</li>
+<li>Unity Humanoid AvatarBuilder pipeline — source implemented in the separate UniVRM runtime; awaiting Unity/WebGL build and model tests</li>
 <li>Safe A-pose to T-pose adjustment — planned</li>
 <li>VRM 0.x export and metadata — planned</li>
 <li>Expressions, materials, SpringBone and colliders conversion — planned</li>
@@ -115,7 +116,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <ul>
 <li>ZIP import extracts one PMX plus common texture assets, but texture path matching and legacy formats still need model-by-model validation.</li>
 <li>PMX physics, IK animation playback, toon rendering, and every MMD-specific material feature are not guaranteed in this preview.</li>
-<li>Humanoid mapping includes core body and finger roles, but pose editing, expressions, physics conversion, and VRM export are not implemented yet.</li>
+<li>Humanoid mapping includes core body and finger roles. Unity Humanoid Avatar creation is implemented in the separate runtime source but is not yet connected to this page or tested in a Unity/WebGL build. Pose editing, expressions, physics conversion, and VRM export are not implemented yet.</li>
 </ul>
 </section>
 <p class="note" style="text-align:center">ASTER PMX2VRM WORKSHOP · Android-first · English UI</p>
