@@ -6,9 +6,8 @@ namespace Aster.PMX2VRM
 {
     /// <summary>
     /// Browser bridge for the Aster PMX2VRM Workshop.
-    /// The browser sends JSON with SendMessage("AsterRuntimeBridge", "ReceiveJson", json).
-    /// This bridge intentionally does not pretend to export VRM until the UniVRM
-    /// import, humanoid validation and exporter pipeline has completed.
+    /// Browser messages are sent with SendMessage("AsterRuntimeBridge", "ReceiveJson", json).
+    /// VRM import/export is deliberately kept unavailable until the complete pipeline is implemented.
     /// </summary>
     public sealed class AsterRuntimeBridge : MonoBehaviour
     {
@@ -20,6 +19,14 @@ namespace Aster.PMX2VRM
         [DllImport("__Internal")]
         private static extern void AsterPostMessage(string json);
 #endif
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void CreateBridge()
+        {
+            if (Instance != null) return;
+            var bridge = new GameObject("AsterRuntimeBridge");
+            bridge.AddComponent<AsterRuntimeBridge>();
+        }
 
         private void Awake()
         {
@@ -43,7 +50,7 @@ namespace Aster.PMX2VRM
             }
 
             MessageReceived?.Invoke(json);
-            PostStatus("received", "Request received by Unity runtime. Import/export pipeline is not enabled yet.");
+            PostStatus("received", "Request received. UniVRM runtime import/export is not implemented yet.");
         }
 
         public void PostStatus(string state, string message)
