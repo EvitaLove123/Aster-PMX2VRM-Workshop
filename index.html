@@ -190,6 +190,9 @@ function clearModel() {
     }
   });
   currentModel = null;
+  runtimeHumanoidReady = false;
+  $('exportVrm0').disabled = true;
+  $('exportVrm1').disabled = true;
   if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
   $('skeleton').disabled = true;
 }
@@ -468,7 +471,7 @@ function buildMappingEditor() {
       const option = document.createElement('option'); option.value = String(item.index); option.textContent = item.name; select.appendChild(option);
     }
     select.value = humanoidMapping[slot] == null ? '' : String(humanoidMapping[slot]);
-    select.addEventListener('change', () => { humanoidMapping[slot] = select.value === '' ? null : Number(select.value); updateMappingSummary(); });
+    select.addEventListener('change', () => { humanoidMapping[slot] = select.value === '' ? null : Number(select.value); runtimeHumanoidReady = false; $('exportVrm0').disabled = !runtimeReady; $('exportVrm1').disabled = !runtimeReady; updateMappingSummary(); });
     row.append(title,select); list.appendChild(row);
   }
   updateMappingSummary();
@@ -485,6 +488,9 @@ function updateMappingSummary() {
   $('mapSummary').textContent = message;
 }
 function autoMapBones() {
+  runtimeHumanoidReady = false;
+  $('exportVrm0').disabled = !runtimeReady;
+  $('exportVrm1').disabled = !runtimeReady;
   if (!sourceBones.length) { $('mapSummary').textContent = 'Load a PMX model first.'; return; }
   humanoidMapping = {};
   const claimed = new Set();
@@ -500,7 +506,7 @@ function autoMapBones() {
   buildMappingEditor();
 }
 $('autoMap').addEventListener('click', autoMapBones);
-$('clearMap').addEventListener('click', () => { humanoidMapping = {}; buildMappingEditor(); });
+$('clearMap').addEventListener('click', () => { runtimeHumanoidReady = false; $('exportVrm0').disabled = !runtimeReady; $('exportVrm1').disabled = !runtimeReady; humanoidMapping = {}; buildMappingEditor(); });
 for (const id of ['metaName','metaVersion','metaAuthor','metaContact','metaReference','metaAllowed','metaLicense','metaCommercial','metaViolent','metaSexual','metaOther']) {
   $(id).addEventListener('input', updateMetadataSummary);
   $(id).addEventListener('change', updateMetadataSummary);
@@ -554,6 +560,8 @@ window.addEventListener('message', event => {
   $('runtimeStatus').textContent = data.message || data.state;
   if (data.state === 'runtime-ready') {
     runtimeReady = true;
+    $('exportVrm0').disabled = !currentModel;
+    $('exportVrm1').disabled = !currentModel;
     $('runtimeStatus').textContent = 'UniVRM ' + (data.univrmVersion || 'runtime') + ' ready. Load a PMX and prepare its mapping.';
   }
   if (data.state === 'humanoid-ready') {
@@ -573,6 +581,8 @@ window.addEventListener('message', event => {
   }
   if (data.state === 'error') {
     runtimeHumanoidReady = false;
+    requestedRuntimeExport = null;
+    pendingRuntimeExport = null;
     $('exportVrm0').disabled = true;
     $('exportVrm1').disabled = true;
     $('runtimeStatus').textContent = 'Runtime error: ' + (data.message || 'Unknown error');
