@@ -26,12 +26,10 @@ mergeInto(LibraryManager.library, {
       anchor.click();
       anchor.remove();
       window.setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+      return 1;
     } catch (error) {
-      window.parent.postMessage({
-        source: "aster-univrm",
-        state: "error",
-        message: "Browser download failed: " + String(error)
-      }, "*");
+      console.error("Aster VRM download failed", error);
+      return 0;
     }
   }
 });
