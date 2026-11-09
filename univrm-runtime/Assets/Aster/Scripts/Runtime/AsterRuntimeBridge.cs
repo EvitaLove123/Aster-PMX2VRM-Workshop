@@ -13,7 +13,7 @@ namespace Aster.PMX2VRM
     /// from the browser, imports it through UniGLTF, and builds a Unity Humanoid Avatar.
     /// No VRM export is reported as successful by this stage.
     /// </summary>
-    public sealed class AsterRuntimeBridge : MonoBehaviour
+    public sealed partial class AsterRuntimeBridge : MonoBehaviour
     {
         public static AsterRuntimeBridge Instance { get; private set; }
 
