@@ -382,25 +382,43 @@ const boneAliases = {
   rightLittleDistal:['rightlittledistal','little03r','pinky03r','rlittle3','右小指０３']
 };
 function compactBoneName(value) {
-  return String(value || '').toLowerCase().replace(/[\s_・.\-:]/g,'');
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/[\s_・.\-:（）()]/g,'');
 }
 function getSlotAliases(slot) {
-  const aliases = [...(boneAliases[slot] || [])];
-  const side = slot.startsWith('left') ? 'left' : slot.startsWith('right') ? 'right' : '';
-  const sideJa = side === 'left' ? '左' : side === 'right' ? '右' : '';
-  const finger = slot.includes('Thumb') ? 'Thumb' : slot.includes('Index') ? 'Index' : slot.includes('Middle') ? 'Middle' : slot.includes('Ring') ? 'Ring' : slot.includes('Little') ? 'Little' : '';
-  const segment = slot.endsWith('Proximal') ? 1 : slot.endsWith('Intermediate') ? 2 : slot.endsWith('Distal') ? 3 : 0;
-  if (finger && segment) {
-    const en = {Thumb:'thumb',Index:'index',Middle:'middle',Ring:'ring',Little:'little'}[finger];
-    const ja = {Thumb:'親指',Index:'人指',Middle:'中指',Ring:'薬指',Little:'小指'}[finger];
-    const n = String(segment), nn = '0'+n;
-    aliases.push(side+finger+'Proximal',side+finger+'Intermediate',side+finger+'Distal');
-    aliases.push(side+en+n,side+en+nn,en+n+(side==='left'?'L':'R'),en+nn+(side==='left'?'L':'R'));
-    aliases.push(sideJa+ja+n,sideJa+ja+nn,sideJa+ja+'０'+n,sideJa+ja+'０'+(segment-1),sideJa+ja+(segment-1));
-    aliases.push(sideJa+ja+'０'+segment,sideJa+ja+segment);
-    aliases.push(finger+'Proximal_'+(side==='left'?'L':'R')+'_1');
-  }
-  return aliases;
+  const side = slot.startsWith('left') ? 'L' : slot.startsWith('right') ? 'R' : '';
+  const isLeft = side === 'L';
+  const jaSide = isLeft ? '左' : '右';
+  const finger = ['Thumb','Index','Middle','Ring','Little'].find(name => slot.includes(name));
+  if (!finger) return boneAliases[slot] || [];
+  const segment = slot.endsWith('Proximal') ? 1 : slot.endsWith('Intermediate') ? 2 : 3;
+  const english = {Thumb:'thumb',Index:'index',Middle:'middle',Ring:'ring',Little:'little'}[finger];
+  const japanese = {Thumb:'親指',Index:'人指',Middle:'中指',Ring:'薬指',Little:'小指'}[finger];
+  const n = String(segment), nn = n.padStart(2,'0');
+  const aliases = [
+    slot, side + finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal'),
+    english + nn + side, english + n + side,
+    english + (segment === 1 ? 'proximal' : segment === 2 ? 'intermediate' : 'distal') + side,
+    finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal') + '_' + side,
+    finger + (segment === 1 ? 'Proximal' : segment === 2 ? 'Intermediate' : 'Distal') + '_' + side + '_1',
+    'finger' + nn + '_' + side,
+    jaSide + japanese + (finger === 'Thumb' ? String(segment - 1) : n),
+    jaSide + japanese + (finger === 'Thumb' ? String(segment - 1).padStart(2,'0') : nn),
+    jaSide + japanese + (finger === 'Thumb' ? String(segment - 1) : n)
+  ];
+  const oldAliases = boneAliases[slot] || [];
+  return [...new Set([...oldAliases, ...aliases])];
+}
+function detectBoneSide(original) {
+  const raw = String(original || '').toLowerCase();
+  if (/(^|[^a-z])left([^a-z]|$)|左/.test(raw) || /(?:^|[_ .-])l(?:$|[_ .-])/.test(raw) || /_(?:l)(?:_|$)/.test(raw) || /(?:^|[_ .-])l\d*$/.test(raw)) return 'left';
+  if (/(^|[^a-z])right([^a-z]|$)|右/.test(raw) || /(?:^|[_ .-])r(?:$|[_ .-])/.test(raw) || /_(?:r)(?:_|$)/.test(raw) || /(?:^|[_ .-])r\d*$/.test(raw)) return 'right';
+  const compact = compactBoneName(raw);
+  if (/left|左/.test(compact)) return 'left';
+  if (/right|右/.test(compact)) return 'right';
+  return '';
 }
 function scoreBoneForSlot(boneName, slot) {
   const original = String(boneName || '');
@@ -408,15 +426,15 @@ function scoreBoneForSlot(boneName, slot) {
   let best = 0;
   for (const aliasRaw of getSlotAliases(slot)) {
     const alias = compactBoneName(aliasRaw);
-    if (name === alias) best = Math.max(best, 100);
-    else if (alias.length > 5 && name.includes(alias)) best = Math.max(best, 78);
+    if (!alias) continue;
+    if (name === alias) best = Math.max(best, 120);
+    else if (alias.length >= 7 && name.includes(alias)) best = Math.max(best, 82);
   }
-  const lower = original.toLowerCase();
-  const left = /left|左|(?:^|[_ .-])l(?:$|[_ .-])/.test(lower);
-  const right = /right|右|(?:^|[_ .-])r(?:$|[_ .-])/.test(lower);
-  if (slot.startsWith('left') && right) best = 0;
-  if (slot.startsWith('right') && left) best = 0;
-  if ((slot.startsWith('left') || slot.startsWith('right')) && !left && !right && !/[左右]/.test(original)) best = 0;
+  const side = detectBoneSide(original);
+  if (slot.startsWith('left') && side !== 'left') return 0;
+  if (slot.startsWith('right') && side !== 'right') return 0;
+  // Never guess a finger side from a side-less name: this prevents mirrored hands.
+  if ((slot.startsWith('left') || slot.startsWith('right')) && !side) return 0;
   return best;
 }
 function buildMappingEditor() {
