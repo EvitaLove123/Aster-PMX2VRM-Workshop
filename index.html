@@ -583,8 +583,8 @@ window.addEventListener('message', event => {
     runtimeHumanoidReady = false;
     requestedRuntimeExport = null;
     pendingRuntimeExport = null;
-    $('exportVrm0').disabled = true;
-    $('exportVrm1').disabled = true;
+    $('exportVrm0').disabled = !runtimeReady || !currentModel;
+    $('exportVrm1').disabled = !runtimeReady || !currentModel;
     $('runtimeStatus').textContent = 'Runtime error: ' + (data.message || 'Unknown error');
   }
 });
