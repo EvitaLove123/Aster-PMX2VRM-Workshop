@@ -412,8 +412,10 @@ function getSlotAliases(slot) {
 }
 function detectBoneSide(original) {
   const raw = String(original || '').toLowerCase();
-  if (/(^|[^a-z])left([^a-z]|$)|左/.test(raw) || /(?:^|[_ .-])l(?:$|[_ .-])/.test(raw) || /_(?:l)(?:_|$)/.test(raw) || /(?:^|[_ .-])l\d*$/.test(raw)) return 'left';
-  if (/(^|[^a-z])right([^a-z]|$)|右/.test(raw) || /(?:^|[_ .-])r(?:$|[_ .-])/.test(raw) || /_(?:r)(?:_|$)/.test(raw) || /(?:^|[_ .-])r\d*$/.test(raw)) return 'right';
+  const leftSuffix = /(?:thumb|index|middle|ring|little|upperarm|lowerarm|forearm|shoulder|hand|thigh|calf|foot)[a-z0-9]*l$/;
+  const rightSuffix = /(?:thumb|index|middle|ring|little|upperarm|lowerarm|forearm|shoulder|hand|thigh|calf|foot)[a-z0-9]*r$/;
+  if (/(^|[^a-z])left([^a-z]|$)|左/.test(raw) || /(?:^|[_ .-])l(?:$|[_ .-])/.test(raw) || /_(?:l)(?:_|$)/.test(raw) || /(?:^|[_ .-])l\d*$/.test(raw) || leftSuffix.test(raw)) return 'left';
+  if (/(^|[^a-z])right([^a-z]|$)|右/.test(raw) || /(?:^|[_ .-])r(?:$|[_ .-])/.test(raw) || /_(?:r)(?:_|$)/.test(raw) || /(?:^|[_ .-])r\d*$/.test(raw) || rightSuffix.test(raw)) return 'right';
   const compact = compactBoneName(raw);
   if (/left|左/.test(compact)) return 'left';
   if (/right|右/.test(compact)) return 'right';
