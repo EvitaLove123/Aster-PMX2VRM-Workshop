@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 using UniGLTF;
 using UnityEngine;
 using UniGLTF.Extensions.VRMC_vrm;
@@ -60,7 +61,7 @@ namespace Aster.PMX2VRM
 
                 var settings = new GltfExportSettings { InverseAxis = Axes.Z };
                 var exportingData = VRM.VRMExporter.Export(settings, root, new RuntimeTextureSerializer());
-                DeliverVrm(SafeFileName(ValueOr(meta.name, root.name)) + "_VRM0.vrm", exportingData.ToGlbBytes(), "vrm0-exported",
+                DeliverVrm(SafeFileName(ValueOr(meta.name, root.name)) + "_VRM0.vrm", exportingData.ToGlbBytes(), "VRM", "vrm0-exported",
                     "Official UniVRM 0.x exporter completed.");
             }
             catch (Exception ex)
@@ -98,7 +99,7 @@ namespace Aster.PMX2VRM
                 };
                 var bytes = UniVRM10.Vrm10Exporter.Export(new GltfExportSettings(), root, null,
                     new RuntimeTextureSerializer(), meta);
-                DeliverVrm(SafeFileName(ValueOr(data.name, root.name)) + "_VRM1.vrm", bytes, "vrm1-exported",
+                DeliverVrm(SafeFileName(ValueOr(data.name, root.name)) + "_VRM1.vrm", bytes, "VRMC_vrm", "vrm1-exported",
                     "Official UniVRM 1.0 exporter completed.");
             }
             catch (Exception ex)
@@ -118,10 +119,9 @@ namespace Aster.PMX2VRM
             return _loadedGltf.Root;
         }
 
-        private void DeliverVrm(string fileName, byte[] bytes, string state, string message)
+        private void DeliverVrm(string fileName, byte[] bytes, string expectedExtension, string state, string message)
         {
-            if (bytes == null || bytes.Length < 20)
-                throw new Exception("UniVRM returned an empty or invalid VRM byte array.");
+            ValidateVrmGlb(bytes, expectedExtension);
 #if UNITY_WEBGL && !UNITY_EDITOR
             if (AsterDownloadFile(fileName, bytes, bytes.Length) == 0)
                 throw new Exception("The browser rejected the generated VRM download.");
@@ -129,6 +129,26 @@ namespace Aster.PMX2VRM
             Debug.Log("Generated " + fileName + " (" + bytes.Length + " bytes).");
 #endif
             PostStatus(state, message + " File size: " + bytes.Length + " bytes.");
+        }
+
+        private static void ValidateVrmGlb(byte[] bytes, string expectedExtension)
+        {
+            if (bytes == null || bytes.Length < 20)
+                throw new Exception("UniVRM returned an empty or truncated VRM file.");
+            if (bytes[0] != 0x67 || bytes[1] != 0x6C || bytes[2] != 0x54 || bytes[3] != 0x46)
+                throw new Exception("Export output does not have the GLB magic header.");
+            if (BitConverter.ToUInt32(bytes, 4) != 2)
+                throw new Exception("Export output is not a glTF 2.0 binary container.");
+            if (BitConverter.ToUInt32(bytes, 8) != (uint)bytes.Length)
+                throw new Exception("GLB declared length does not match the exported file size.");
+
+            var jsonLength = BitConverter.ToUInt32(bytes, 12);
+            if (BitConverter.ToUInt32(bytes, 16) != 0x4E4F534A || jsonLength > bytes.Length - 20)
+                throw new Exception("GLB JSON chunk header is invalid.");
+            var json = Encoding.UTF8.GetString(bytes, 20, (int)jsonLength);
+            var extensionKey = "\"" + expectedExtension + "\"";
+            if (json.IndexOf(extensionKey, StringComparison.Ordinal) < 0)
+                throw new Exception("GLB does not contain the expected VRM extension: " + expectedExtension);
         }
 
         private static string SafeFileName(string value)
