@@ -42,7 +42,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <strong>Download 3D Preview (GLB)</strong>
 <p class="note">Load a PMX or ZIP first. When the 3D model appears above, this button becomes available. This downloads a preview GLB, not a VRM avatar.</p>
 <button id="downloadGlb" type="button" disabled>Download Preview GLB</button>
-<div class="map-summary" id="exportStatus">Waiting for a PMX model to load.</div>
+<div class="map-summary" id="glbStatus">Waiting for a PMX model to load.</div>
 </div>
 </section>
 <section class="card">
@@ -59,7 +59,7 @@ ul{padding-left:21px}.done{color:#23633b}
 </section>
 <section class="card" id="mappingCard">
 <h2>3. Humanoid mapping</h2>
-<p class="note">Map the PMX skeleton to standard Unity/VRM Humanoid roles. Original PMX bone names remain unchanged. Finger matching supports Japanese full-width numbering and common L/R prefix/suffix conventions. Ambiguous generic Finger01 names are left unmapped rather than guessed.</p>
+<p class="note">Map the PMX skeleton to standard VRM Humanoid roles. Original PMX bone names remain unchanged. Finger matching supports Japanese full-width numbering and common L/R prefix/suffix conventions. Ambiguous generic Finger01 names are left unmapped rather than guessed.</p>
 <div class="map-tools">
 <button id="autoMap" type="button">Auto map bones</button>
 <button id="clearMap" class="secondary" type="button">Clear mapping</button>
@@ -470,6 +470,7 @@ function buildMappingEditor() {
     row.append(title,select); list.appendChild(row);
   }
   updateMappingSummary();
+  updateExportButtons();
 }
 function updateMappingSummary() {
   const mapped = humanoidSlots.filter(([slot]) => Number.isInteger(humanoidMapping[slot])).length;
@@ -593,6 +594,22 @@ function prepareExportRoot() {
   const wrapper = new THREE.Group();
   wrapper.name = 'AsterAvatar';
   wrapper.add(root);
+  // GLTF node names must be unambiguous for both VRM serializers.
+  const nameCounts = new Map();
+  wrapper.traverse(obj => {
+    if (obj.name) nameCounts.set(obj.name, (nameCounts.get(obj.name) || 0) + 1);
+  });
+  const usedNames = new Set();
+  let uniqueIndex = 0;
+  wrapper.traverse(obj => {
+    const original = obj.name || obj.type || 'Node';
+    if (nameCounts.get(original) > 1 || usedNames.has(original)) {
+      let candidate;
+      do { candidate = original + '__Aster_' + (++uniqueIndex); } while (usedNames.has(candidate));
+      obj.name = candidate;
+    }
+    usedNames.add(obj.name);
+  });
   wrapper.updateMatrixWorld(true);
   const clonedSkinnedMesh = [];
   wrapper.traverse(obj => { if (obj.isSkinnedMesh && obj.skeleton) clonedSkinnedMesh.push(obj); });
@@ -644,7 +661,7 @@ async function runVrmExport(format) {
     $('exportStatus').textContent = 'VRM '+format+' export failed: '+(error?.message || String(error));
   } finally {
     if (prepared?.wrapper) prepared.wrapper.traverse(obj => {
-      if (obj.geometry) obj.geometry.dispose();
+      // Geometry and textures are shared with the preview clone; do not dispose them here.
       if (obj.material) for (const material of (Array.isArray(obj.material) ? obj.material : [obj.material])) material.dispose();
     });
     exportBusy = false; updateExportButtons();
@@ -653,10 +670,10 @@ async function runVrmExport(format) {
 $('exportVrm0').addEventListener('click', () => runVrmExport('0.x'));
 $('exportVrm1').addEventListener('click', () => runVrmExport('1.0'));
 $('downloadGlb').addEventListener('click', async () => {
-  if (!currentModel) { $('exportStatus').textContent = 'Load a PMX model first.'; return; }
+  if (!currentModel) { $('glbStatus').textContent = 'Load a PMX model first.'; return; }
   const button = $('downloadGlb');
   button.disabled = true;
-  $('exportStatus').textContent = 'Preparing a GLB-compatible copy…';
+  $('glbStatus').textContent = 'Preparing a GLB-compatible copy…';
   let exportRoot = null;
   try {
     // Clone only the actual PMX model child. Never clone the preview wrapper,
@@ -695,7 +712,7 @@ $('downloadGlb').addEventListener('click', async () => {
     exportScene.name = 'Aster_GL B_Preview'.replace(/\s+/g, '');
     exportScene.add(exportRoot);
     exportScene.updateMatrixWorld(true);
-    $('exportStatus').textContent = 'Converting model and textures to GLB…';
+    $('glbStatus').textContent = 'Converting model and textures to GLB…';
     const exporter = new GLTFExporter();
     const result = await exporter.parseAsync(exportScene, {binary:true, onlyVisible:true});
     if (!(result instanceof ArrayBuffer)) throw new Error('Exporter did not return a binary GLB file.');
@@ -707,15 +724,15 @@ $('downloadGlb').addEventListener('click', async () => {
     anchor.href = url; anchor.download = base+'_Preview.glb';
     anchor.style.display = 'none'; document.body.appendChild(anchor); anchor.click(); anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-    $('exportStatus').textContent = 'GLB generated ('+(blob.size/1048576).toFixed(2)+' MB). If Android did not start the download, check Chrome Downloads and allow downloads for this site. This is a preview GLB, not a VRM avatar.';
+    $('glbStatus').textContent = 'GLB generated ('+(blob.size/1048576).toFixed(2)+' MB). If Android did not start the download, check Chrome Downloads and allow downloads for this site. This is a preview GLB, not a VRM avatar.';
   } catch (error) {
     console.error('GLB export diagnostic:', error);
     const message = error && error.message ? error.message : String(error);
     const stack = error && error.stack ? error.stack.split('\n').slice(0,5).join(' | ') : 'No stack trace available';
-    $('exportStatus').textContent = 'GLB export failed: ' + message + ' — Details: ' + stack;
+    $('glbStatus').textContent = 'GLB export failed: ' + message + ' — Details: ' + stack;
   } finally {
     if (exportRoot) exportRoot.traverse(obj => {
-      if (obj.geometry) obj.geometry.dispose();
+      // Geometry and texture maps are shared with the preview model.
       if (obj.material) for (const material of (Array.isArray(obj.material) ? obj.material : [obj.material])) material.dispose();
     });
     button.disabled = false;
