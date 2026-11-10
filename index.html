@@ -69,7 +69,7 @@ ul{padding-left:21px}.done{color:#23633b}
 </section>
 <section class="card" id="metadataCard">
 <h2>4. Model information &amp; permissions</h2>
-<p class="note">Edit the model metadata that the official UniVRM exporters will embed. VRM 1.0 has different permission categories, so a few legacy values are translated conservatively. These fields do not alter the original PMX.</p>
+<p class="note">Edit metadata embedded directly by the browser-based VRM 0.x / 1.0 exporters. These fields do not alter the original PMX.</p>
 <div class="grid">
 <div class="field"><label for="metaName">Model name</label><input id="metaName" type="text" placeholder="Model name"></div>
 <div class="field"><label for="metaVersion">Version</label><input id="metaVersion" type="text" value="1.0" placeholder="1.0"></div>
@@ -85,23 +85,20 @@ ul{padding-left:21px}.done{color:#23633b}
 <div class="field"><label for="metaSexual">Sexual use</label><select id="metaSexual"><option value="Disallow">Disallow</option><option value="Allow">Allow</option></select></div>
 <div class="field"><label for="metaOther">Other permissions / URL</label><input id="metaOther" type="text" placeholder="Optional"></div>
 </div>
-<div class="map-summary" id="metadataSummary">Metadata is editable and will be embedded by the official UniVRM runtime after a successful WebGL build.</div>
+<div class="field" style="margin-top:10px"><label for="metaThumbnail">Optional thumbnail (PNG/JPEG, VRM 0.x)</label><input id="metaThumbnail" type="file" accept="image/png,image/jpeg"></div>
+<div class="map-summary" id="metadataSummary">Metadata will be embedded by the browser exporter.</div>
 </section>
 <section class="card" id="exportCard">
-<h2>5. VRM Export</h2>
-<p class="note">The Workshop sends the GLB preview and explicit Humanoid mappings to the official UniVRM runtime. Export is enabled only after Unity reports a valid Humanoid Avatar.</p>
+<h2>5. Download VRM</h2>
+<p class="note">Export runs locally in this browser. Complete the required Humanoid mapping first. VRM 0.x and VRM 1.0 are generated independently.</p>
 <div class="map-tools">
 <button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
 <button id="exportVrm1" type="button" disabled>Download VRM 1.0</button>
 </div>
-<div class="map-summary">The official runtime must finish loading and validate the Humanoid Avatar before either export button becomes available. The GLB preview download remains available in section 1.</div>
+<div class="map-summary" id="exportStatus">Load a PMX model, complete its required Humanoid mapping, then choose a VRM format to test.</div>
 </section>
-<section class="card" id="runtimeCard">
-<h2>UniVRM Runtime</h2>
-<p class="note">Official UniVRM WebGL runtime. First deployment requires a Unity license secret in GitHub Actions and GitHub Pages set to Actions. The Unity player runs in this panel.</p>
-<div class="map-summary" id="runtimeStatus">Waiting for the official UniVRM WebGL runtime…</div>
-<iframe id="univrmRuntime" title="Aster official UniVRM runtime" src="./univrm-runtime/Build/WebGL/index.html" style="width:100%;height:360px;border:1px solid var(--line);border-radius:12px;background:#f4f7fb" allow="fullscreen"></iframe>
-</section>
+
+
 <section class="card">
 <h2>6. Conversion pipeline</h2>
 <ul>
@@ -110,10 +107,10 @@ ul{padding-left:21px}.done{color:#23633b}
 <li class="done">Interactive 3D preview — first browser prototype</li>
 <li class="done">Humanoid mapping editor — first prototype</li>
 <li class="done">Automatic and manual mapping for core body and finger humanoid bones — improved side-aware aliases</li>
-<li>Unity Humanoid AvatarBuilder pipeline — implemented in the separate UniVRM runtime source; awaiting Unity/WebGL build and model tests</li>
-<li>Official UniVRM 0.x and 1.0 runtime exporter calls — implemented in the separate runtime source; awaiting Unity/WebGL compile and model tests</li>
+<li>Browser-native VRM 0.x and VRM 1.0 export buttons — connected to separate Three.js serializers; test on real PMX models</li>
+<li>VRM 0.x metadata, humanoid mapping, first-person, BlendShape and optional thumbnail — implementation scaffold; validator testing pending</li>
+<li>VRM 1.0 metadata and humanoid core — implementation scaffold; validator testing pending</li>
 <li>Safe A-pose to T-pose adjustment — planned</li>
-<li>VRM 0.x metadata + official runtime export API — source implemented; validation pending</li>
 <li>Expressions, material conversion, SpringBone and colliders — further conversion/validation work required</li>
 </ul>
 <p class="note">This is an early PMX inspection prototype, not a PMX-to-VRM converter. Parsing and preview must still be tested with representative PMX models on Android Chrome.</p>
@@ -123,7 +120,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <ul>
 <li>ZIP import extracts one PMX plus common texture assets, but texture path matching and legacy formats still need model-by-model validation.</li>
 <li>PMX physics, IK animation playback, toon rendering, and every MMD-specific material feature are not guaranteed in this preview.</li>
-<li>Humanoid mapping includes core body and finger roles. The page now has a browser bridge for the separate Unity runtime, but the runtime build must be deployed and tested before this workflow is usable. Expressions, MMD physics conversion, SpringBone authoring, and complete VRM validation remain unfinished.</li>
+<li>Humanoid mapping includes core body and finger roles. Browser-native VRM export is now wired for testing, but both formats still need independent schema-validator and target-app checks. Expressions, MMD physics conversion, SpringBone authoring, and complete VRM validation remain unfinished.</li>
 </ul>
 </section>
 <p class="note" style="text-align:center">ASTER PMX2VRM WORKSHOP · Android-first · English UI</p>
@@ -134,6 +131,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
+import { exportVrm0 } from './src/vrm/three-vrm0-exporter.js';
+import { exportVrm10 } from './src/vrm/three-vrm-exporter.js';
 import JSZip from 'jszip';
 
 const $ = id => document.getElementById(id);
@@ -143,7 +142,7 @@ let renderer, scene, camera, controls, currentModel = null, skeletonHelper = nul
 let textureUrls = [], textureMap = new Map(), showBones = false;
 let sourceBones = [], humanoidMapping = {};
 let sourceModelFileName = '';
-let runtimeReady = false, runtimeHumanoidReady = false, pendingRuntimeExport = null, requestedRuntimeExport = null;
+let exportBusy = false;
 
 function setStatus(message, kind='') {
   state.textContent = message;
@@ -189,7 +188,6 @@ function clearModel() {
     }
   });
   currentModel = null;
-  runtimeHumanoidReady = false;
   $('exportVrm0').disabled = true;
   $('exportVrm1').disabled = true;
   if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
@@ -308,9 +306,7 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     showBones = false; $('skeleton').textContent = 'Show skeleton'; $('skeleton').disabled = false;
     empty.style.display = 'none'; frameModel(currentModel);
     $('downloadGlb').disabled = false;
-    $('exportVrm0').disabled = !runtimeReady;
-    $('exportVrm1').disabled = !runtimeReady;
-    runtimeHumanoidReady = false;
+    updateExportButtons();
     let meshes = 0, materials = 0;
     model.traverse(obj => {
       if (obj.isMesh) { meshes++; materials += Array.isArray(obj.material) ? obj.material.length : (obj.material ? 1 : 0); }
@@ -470,7 +466,7 @@ function buildMappingEditor() {
       const option = document.createElement('option'); option.value = String(item.index); option.textContent = item.name; select.appendChild(option);
     }
     select.value = humanoidMapping[slot] == null ? '' : String(humanoidMapping[slot]);
-    select.addEventListener('change', () => { humanoidMapping[slot] = select.value === '' ? null : Number(select.value); runtimeHumanoidReady = false; $('exportVrm0').disabled = !runtimeReady; $('exportVrm1').disabled = !runtimeReady; updateMappingSummary(); });
+    select.addEventListener('change', () => { humanoidMapping[slot] = select.value === '' ? null : Number(select.value); updateMappingSummary(); updateExportButtons(); });
     row.append(title,select); list.appendChild(row);
   }
   updateMappingSummary();
@@ -487,9 +483,7 @@ function updateMappingSummary() {
   $('mapSummary').textContent = message;
 }
 function autoMapBones() {
-  runtimeHumanoidReady = false;
-  $('exportVrm0').disabled = !runtimeReady;
-  $('exportVrm1').disabled = !runtimeReady;
+  updateExportButtons();
   if (!sourceBones.length) { $('mapSummary').textContent = 'Load a PMX model first.'; return; }
   humanoidMapping = {};
   const claimed = new Set();
@@ -505,104 +499,159 @@ function autoMapBones() {
   buildMappingEditor();
 }
 $('autoMap').addEventListener('click', autoMapBones);
-$('clearMap').addEventListener('click', () => { runtimeHumanoidReady = false; $('exportVrm0').disabled = !runtimeReady; $('exportVrm1').disabled = !runtimeReady; humanoidMapping = {}; buildMappingEditor(); });
+$('clearMap').addEventListener('click', () => { humanoidMapping = {}; buildMappingEditor(); updateExportButtons(); });
 for (const id of ['metaName','metaVersion','metaAuthor','metaContact','metaReference','metaAllowed','metaLicense','metaCommercial','metaViolent','metaSexual','metaOther']) {
   $(id).addEventListener('input', updateMetadataSummary);
   $(id).addEventListener('change', updateMetadataSummary);
 }
 function updateMetadataSummary() {
-  $('metadataSummary').textContent = 'Prepared metadata: '+($('metaName').value.trim() || 'Untitled model')+' · v'+($('metaVersion').value.trim() || '1.0')+' · Author: '+($('metaAuthor').value.trim() || 'Not specified')+'. Ready to embed in the official UniVRM export.';
+  $('metadataSummary').textContent = 'Prepared metadata: '+($('metaName').value.trim() || 'Untitled model')+' · v'+($('metaVersion').value.trim() || '1.0')+' · Author: '+($('metaAuthor').value.trim() || 'Not specified')+'. Ready for browser-based VRM export.';
 }
 updateMetadataSummary();
 
-function getRuntimeMetadata() {
+const REQUIRED_0X = ['hips','spine','chest','neck','head','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot'];
+const REQUIRED_1X = ['hips','spine','head','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot'];
+function getRequiredMissing(required) {
+  return required.filter(slot => !Number.isInteger(humanoidMapping[slot]) || !sourceBones[humanoidMapping[slot]]);
+}
+function updateExportButtons() {
+  const missing0 = getRequiredMissing(REQUIRED_0X);
+  const missing1 = getRequiredMissing(REQUIRED_1X);
+  $('exportVrm0').disabled = !currentModel || exportBusy || missing0.length > 0;
+  $('exportVrm1').disabled = !currentModel || exportBusy || missing1.length > 0;
+  if (currentModel) {
+    const notes = [];
+    if (missing0.length) notes.push('0.x missing: '+missing0.join(', '));
+    if (missing1.length) notes.push('1.0 missing: '+missing1.join(', '));
+    if (notes.length) $('exportStatus').textContent = notes.join(' · ');
+    else $('exportStatus').textContent = 'Required Humanoid mappings are present. Choose VRM 0.x or 1.0 to export a test file.';
+  }
+}
+function getBrowserMeta(format) {
+  const title = $('metaName').value.trim() || sourceModelFileName || 'Aster Model';
+  const author = $('metaAuthor').value.trim();
+  if (!author) throw new Error('Please enter an Author in Model information.');
+  if (format === '0.x') {
+    const licenseMap = {
+      Redistribution_Prohibited:'Redistribution_Prohibited',
+      CC0:'CC0', CC_BY:'CC_BY', CC_BY_NC:'CC_BY_NC',
+      CC_BY_NC_SA:'CC_BY_NC_SA', Other:'Other'
+    };
+    return {
+      title, author, version:$('metaVersion').value.trim(),
+      contactInformation:$('metaContact').value.trim(),
+      reference:$('metaReference').value.trim(),
+      allowedUserName:$('metaAllowed').value,
+      licenseName:licenseMap[$('metaLicense').value] || 'Redistribution_Prohibited',
+      commercialUssageName:$('metaCommercial').value,
+      violentUssageName:$('metaViolent').value,
+      sexualUssageName:$('metaSexual').value,
+      otherLicenseUrl:$('metaOther').value.trim()
+    };
+  }
+  const permission = $('metaAllowed').value;
+  const commercial = $('metaCommercial').value === 'Allow' ? 'personalProfit' : 'personalNonProfit';
   return {
-    name: $('metaName').value.trim(),
-    version: $('metaVersion').value.trim(),
-    author: $('metaAuthor').value.trim(),
-    contact: $('metaContact').value.trim(),
-    reference: $('metaReference').value.trim(),
-    allowedUser: $('metaAllowed').value,
-    license: $('metaLicense').value,
-    commercial: $('metaCommercial').value,
-    violent: $('metaViolent').value,
-    sexual: $('metaSexual').value,
-    other: $('metaOther').value.trim()
+    name:title, authors:[author], version:$('metaVersion').value.trim(),
+    contactInformation:$('metaContact').value.trim(),
+    references:$('metaReference').value.trim() ? [$('metaReference').value.trim()] : [],
+    licenseUrl:'https://vrm.dev/licenses/1.0/',
+    avatarPermission:permission === 'Everyone' ? 'everyone' : permission === 'ExplicitlyLicensedPerson' ? 'onlySeparatelyLicensedPerson' : 'onlyAuthor',
+    commercialUsage:commercial, creditNotation:'required', modification:'prohibited',
+    allowExcessivelyViolentUsage:$('metaViolent').value === 'Allow',
+    allowExcessivelySexualUsage:$('metaSexual').value === 'Allow'
   };
 }
-function postRuntimeCall(method, value='') {
-  const frame = $('univrmRuntime');
-  if (!runtimeReady || !frame || !frame.contentWindow) throw new Error('Official UniVRM runtime is not ready yet.');
-  frame.contentWindow.postMessage({type:'aster-univrm-call', method, value}, location.origin);
+function prepareExportRoot() {
+  currentModel.updateMatrixWorld(true);
+  const pmxRoot = currentModel.children.find(child => child !== skeletonHelper && !child.isSkeletonHelper);
+  if (!pmxRoot) throw new Error('Could not find the PMX model node inside the preview.');
+  const root = cloneSkeleton(pmxRoot);
+  root.position.copy(currentModel.position);
+  root.quaternion.copy(currentModel.quaternion);
+  root.scale.copy(currentModel.scale);
+  root.name = $('metaName').value.trim() || sourceModelFileName || 'Aster_Model';
+  root.traverse(obj => {
+    if (!obj.isMesh) return;
+    obj.frustumCulled = false;
+    const convert = material => {
+      const standard = new THREE.MeshStandardMaterial({
+        name:material.name || 'PMX Material',
+        color:material.color ? material.color.clone() : new THREE.Color(0xffffff),
+        map:material.map || null, alphaMap:material.alphaMap || null,
+        transparent:!!material.transparent, opacity:material.opacity == null ? 1 : material.opacity,
+        side:material.side == null ? THREE.DoubleSide : material.side,
+        roughness:0.85, metalness:0
+      });
+      if (material.emissive) standard.emissive.copy(material.emissive);
+      if (material.emissiveMap) standard.emissiveMap = material.emissiveMap;
+      if (material.vertexColors) standard.vertexColors = true;
+      return standard;
+    };
+    obj.material = Array.isArray(obj.material) ? obj.material.map(convert) : convert(obj.material || {});
+  });
+  const wrapper = new THREE.Group();
+  wrapper.name = 'AsterAvatar';
+  wrapper.add(root);
+  wrapper.updateMatrixWorld(true);
+  const clonedSkinnedMesh = [];
+  wrapper.traverse(obj => { if (obj.isSkinnedMesh && obj.skeleton) clonedSkinnedMesh.push(obj); });
+  if (!clonedSkinnedMesh.length) throw new Error('The cloned PMX has no SkinnedMesh skeleton.');
+  const clonedBones = clonedSkinnedMesh[0].skeleton.bones;
+  const humanoid = {};
+  for (const [slot,index] of Object.entries(humanoidMapping)) {
+    if (Number.isInteger(index) && clonedBones[index]) humanoid[slot] = clonedBones[index];
+  }
+  return { wrapper, humanoid };
 }
-function sendGlbToRuntime(arrayBuffer) {
-  const mappings = humanoidSlots
-    .filter(([slot]) => Number.isInteger(humanoidMapping[slot]))
-    .map(([slot]) => ({slot, boneName: sourceBones[humanoidMapping[slot]]?.name || ''}))
-    .filter(item => item.boneName);
-  const bytes = new Uint8Array(arrayBuffer);
-  postRuntimeCall('BeginGlb', (sourceModelFileName || 'AsterModel') + '.glb');
-  const byteChunkSize = 49152; // divisible by three so independently encoded chunks concatenate safely
-  for (let offset = 0; offset < bytes.length; offset += byteChunkSize) {
-    const end = Math.min(offset + byteChunkSize, bytes.length);
-    let binary = '';
-    for (let i = offset; i < end; i++) binary += String.fromCharCode(bytes[i]);
-    postRuntimeCall('AppendGlbChunk', btoa(binary));
-  }
-  postRuntimeCall('FinishGlbImport', JSON.stringify({mappings, metadata:getRuntimeMetadata()}));
-  $('runtimeStatus').textContent = 'GLB sent to Unity. Importing and building the Humanoid Avatar…';
+function downloadBlob(blob, filename) {
+  if (!(blob instanceof Blob) || !blob.size) throw new Error('Exporter returned an empty file.');
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url; anchor.download = filename; anchor.style.display = 'none';
+  document.body.appendChild(anchor); anchor.click(); anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
-window.addEventListener('message', event => {
-  const frame = $('univrmRuntime');
-  if (!frame || event.source !== frame.contentWindow || !event.data || event.data.source !== 'aster-univrm') return;
-  const data = event.data;
-  $('runtimeStatus').textContent = data.message || data.state;
-  if (data.state === 'runtime-ready') {
-    runtimeReady = true;
-    try { postRuntimeCall('AcknowledgeReady', ''); } catch (error) {}
-    $('exportVrm0').disabled = !currentModel;
-    $('exportVrm1').disabled = !currentModel;
-    $('runtimeStatus').textContent = 'UniVRM ' + (data.univrmVersion || 'runtime') + ' ready. Load a PMX and prepare its mapping.';
-  }
-  if (data.state === 'humanoid-ready') {
-    runtimeHumanoidReady = true;
-    $('exportVrm0').disabled = false;
-    $('exportVrm1').disabled = false;
-    $('runtimeStatus').textContent = 'Unity Humanoid Avatar validated. Official VRM exporters are ready.';
-    if (requestedRuntimeExport) {
-      const target = requestedRuntimeExport;
-      requestedRuntimeExport = null;
-      postRuntimeCall(target === '0.x' ? 'ExportVrm0' : 'ExportVrm1', JSON.stringify(getRuntimeMetadata()));
-      $('exportStatus').textContent = 'Calling official UniVRM ' + target + ' exporter…';
-    }
-  }
-  if (data.state === 'vrm0-exported' || data.state === 'vrm1-exported') {
-    $('exportStatus').textContent = data.message || 'VRM file generated. Check Chrome Downloads.';
-  }
-  if (data.state === 'error') {
-    runtimeHumanoidReady = false;
-    requestedRuntimeExport = null;
-    pendingRuntimeExport = null;
-    $('exportVrm0').disabled = !runtimeReady || !currentModel;
-    $('exportVrm1').disabled = !runtimeReady || !currentModel;
-    $('runtimeStatus').textContent = 'Runtime error: ' + (data.message || 'Unknown error');
-  }
-});
-function requestRuntimeExport(target) {
-  if (!currentModel) { $('exportStatus').textContent = 'Load a PMX model first.'; return; }
-  if (!runtimeReady) { $('exportStatus').textContent = 'The official UniVRM WebGL runtime is not ready. Wait for its status above.'; return; }
-  if (runtimeHumanoidReady) {
-    postRuntimeCall(target === '0.x' ? 'ExportVrm0' : 'ExportVrm1', JSON.stringify(getRuntimeMetadata()));
-    $('exportStatus').textContent = 'Calling official UniVRM ' + target + ' exporter…';
+async function runVrmExport(format) {
+  if (!currentModel || exportBusy) return;
+  const required = format === '0.x' ? REQUIRED_0X : REQUIRED_1X;
+  const missing = getRequiredMissing(required);
+  if (missing.length) {
+    $('exportStatus').textContent = 'Please map these required bones first: '+missing.join(', ');
     return;
   }
-  requestedRuntimeExport = target;
-  pendingRuntimeExport = target;
-  $('exportStatus').textContent = 'Preparing GLB and Unity Humanoid import for VRM ' + target + '…';
-  $('downloadGlb').click();
+  exportBusy = true; updateExportButtons();
+  let prepared;
+  try {
+    $('exportStatus').textContent = 'Preparing avatar copy for VRM '+format+'…';
+    prepared = prepareExportRoot();
+    const meta = getBrowserMeta(format);
+    let result;
+    if (format === '0.x') {
+      const thumbFile = $('metaThumbnail').files?.[0];
+      result = await exportVrm0(prepared.wrapper, {
+        humanoid:prepared.humanoid, meta,
+        thumbnail:thumbFile || undefined
+      });
+    } else {
+      result = await exportVrm10(prepared.wrapper, {humanoid:prepared.humanoid, meta});
+    }
+    const base = (meta.title || meta.name || 'Aster_Model').replace(/[^a-z0-9_-]+/gi,'_');
+    downloadBlob(result.blob, base+'_VRM_'+(format === '0.x' ? '0x' : '1.0')+'.vrm');
+    $('exportStatus').textContent = 'VRM '+format+' file generated ('+(result.blob.size/1048576).toFixed(2)+' MB). Three-vrm read-back passed. This is an experimental export; please test it in your target app and report any issue.';
+  } catch (error) {
+    console.error('VRM '+format+' export diagnostic:', error);
+    $('exportStatus').textContent = 'VRM '+format+' export failed: '+(error?.message || String(error));
+  } finally {
+    if (prepared?.wrapper) prepared.wrapper.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) for (const material of (Array.isArray(obj.material) ? obj.material : [obj.material])) material.dispose();
+    });
+    exportBusy = false; updateExportButtons();
+  }
 }
-$('exportVrm0').addEventListener('click', () => requestRuntimeExport('0.x'));
-$('exportVrm1').addEventListener('click', () => requestRuntimeExport('1.0'));
+$('exportVrm0').addEventListener('click', () => runVrmExport('0.x'));
+$('exportVrm1').addEventListener('click', () => runVrmExport('1.0'));
 $('downloadGlb').addEventListener('click', async () => {
   if (!currentModel) { $('exportStatus').textContent = 'Load a PMX model first.'; return; }
   const button = $('downloadGlb');
@@ -650,13 +699,6 @@ $('downloadGlb').addEventListener('click', async () => {
     const exporter = new GLTFExporter();
     const result = await exporter.parseAsync(exportScene, {binary:true, onlyVisible:true});
     if (!(result instanceof ArrayBuffer)) throw new Error('Exporter did not return a binary GLB file.');
-    if (pendingRuntimeExport) {
-      const target = pendingRuntimeExport;
-      pendingRuntimeExport = null;
-      $('exportStatus').textContent = 'Sending GLB to official UniVRM runtime for Humanoid conversion…';
-      sendGlbToRuntime(result);
-      return;
-    }
     const blob = new Blob([result], {type:'model/gltf-binary'});
     if (!blob.size) throw new Error('The generated GLB file is empty.');
     const url = URL.createObjectURL(blob);
@@ -668,12 +710,14 @@ $('downloadGlb').addEventListener('click', async () => {
     $('exportStatus').textContent = 'GLB generated ('+(blob.size/1048576).toFixed(2)+' MB). If Android did not start the download, check Chrome Downloads and allow downloads for this site. This is a preview GLB, not a VRM avatar.';
   } catch (error) {
     console.error('GLB export diagnostic:', error);
-    pendingRuntimeExport = null;
-    requestedRuntimeExport = null;
     const message = error && error.message ? error.message : String(error);
     const stack = error && error.stack ? error.stack.split('\n').slice(0,5).join(' | ') : 'No stack trace available';
     $('exportStatus').textContent = 'GLB export failed: ' + message + ' — Details: ' + stack;
   } finally {
+    if (exportRoot) exportRoot.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) for (const material of (Array.isArray(obj.material) ? obj.material : [obj.material])) material.dispose();
+    });
     button.disabled = false;
   }
 });
