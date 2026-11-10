@@ -40,7 +40,7 @@ Added `src/vrm/three-vrm-exporter.js`:
 - Reads the result back through the Three-vrm loader adapter before returning a Blob.
 - Requires a model name, at least one author, and an HTTPS license URL. Defaults to the official VRM 1.0 license URL; license permissions default conservatively.
 
-**Scope boundary:** this is a core serializer scaffold, not yet the complete exporter. It does not yet serialize VRMC_materials_mtoon, VRMC_springBone, expressions, look-at, constraints, or a thumbnail image. It is not wired to the PMX page's production download button. No runtime acceptance test has been run in a real browser yet. Do not use it as a finished converter.
+**Scope boundary:** this is a core serializer scaffold, not yet the complete exporter. It does not yet serialize VRMC_materials_mtoon, VRMC_springBone, expressions, look-at, constraints, or a thumbnail image. It is now wired to the PMX page's experimental Download VRM 1.0 button. No runtime acceptance test has been run in a real browser yet. Do not use it as a finished converter.
 
 ### Phase 2 validation checklist
 
@@ -63,7 +63,7 @@ Added `src/vrm/three-vrm0-exporter.js`:
 - Serializes BlendShapeMaster groups when supplied: maps a Three.js mesh plus morph target name/index to glTF mesh and target indices, and validates bind weights and preset names.
 - Embeds an optional PNG/JPEG thumbnail into the GLB BIN chunk, adds glTF image/texture references, and writes the texture index to legacy `meta.texture`.
 
-**Scope boundary:** this is only the VRM 0.x core scaffold. It does not yet translate PMX material settings into MToon materialProperties, map GLTF morph target indices into BlendShape groups, convert PMX hair/cloth physics into secondaryAnimation, or embed a thumbnail. It is not wired to the production PMX download button. The smoke test is source-only and has not been run in a real browser. A GitHub Actions workflow checks JavaScript module syntax only; it is not a browser or VRM-schema test.
+**Scope boundary:** this is only the VRM 0.x core scaffold. It does not yet translate PMX material settings into MToon materialProperties, map GLTF morph target indices into BlendShape groups, convert PMX hair/cloth physics into secondaryAnimation, or embed a thumbnail. It is now wired to the PMX page's experimental Download VRM 0.x button. The smoke test is source-only and has not been run in a real browser. A GitHub Actions workflow checks JavaScript module syntax only; it is not a browser or VRM-schema test.
 
 ### VRM 0.x validation checklist
 
@@ -73,7 +73,7 @@ Added `src/vrm/three-vrm0-exporter.js`:
 - [ ] Add tested materialProperties / MToon conversion.
 - [ ] Add tested BlendShapeMaster mapping and thumbnail embedding.
 - [ ] Add tested secondaryAnimation bone groups and collider groups.
-- [ ] Connect to PMX conversion only after real fixture and target-app validation.
+- [x] Connect experimental export buttons to the PMX page (real fixture and target-app validation still pending).
 
 
 ## Browser-native export buttons (experimental)
