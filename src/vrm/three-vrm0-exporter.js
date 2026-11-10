@@ -179,24 +179,13 @@ function mapNodes(scene, gltfJson, mapping) {
   return { humanBones: Object.values(result), byObject };
 }
 
-function cleanOptionalPayload(payload, label) {
-  if (payload == null) return undefined;
-  if (typeof payload !== 'object' || Array.isArray(payload)) {
-    throw new TypeError(label + ' must be an object.');
-  }
-  return payload;
-}
-
 /**
  * @param {import('three').Object3D} scene Root containing the complete avatar.
  * @param {object} options
  * @param {Record<string, import('three').Object3D>} options.humanoid VRM bone name -> Three.js Bone.
  * @param {object} options.meta Legacy VRM 0.x metadata.
  * @param {object} [options.firstPerson] Optional first-person settings.
- * @param {object} [options.blendShapeMaster] Future-compatible raw legacy payload.
- * @param {object} [options.secondaryAnimation] Future-compatible raw legacy payload.
- * @param {Array<object>} [options.materialProperties] Future-compatible legacy material payload.
- */
+ *  */
 export async function exportVrm0(scene, options = {}) {
   if (!scene || typeof scene.traverse !== 'function') {
     throw new TypeError('A Three.js avatar scene is required.');
@@ -235,9 +224,7 @@ export async function exportVrm0(scene, options = {}) {
       y: Number(firstPersonInput.offset?.y) || 0,
       z: Number(firstPersonInput.offset?.z) || 0,
     },
-    meshAnnotations: Array.isArray(firstPersonInput.meshAnnotations)
-      ? firstPersonInput.meshAnnotations
-      : [],
+    meshAnnotations: [],
     lookAtTypeName: firstPersonInput.lookAtTypeName === 'BlendShape' ? 'BlendShape' : 'Bone',
   };
 
@@ -258,12 +245,6 @@ export async function exportVrm0(scene, options = {}) {
     },
     firstPerson,
   };
-
-  const blendShapeMaster = cleanOptionalPayload(options.blendShapeMaster, 'blendShapeMaster');
-  const secondaryAnimation = cleanOptionalPayload(options.secondaryAnimation, 'secondaryAnimation');
-  if (blendShapeMaster) vrm.blendShapeMaster = blendShapeMaster;
-  if (secondaryAnimation) vrm.secondaryAnimation = secondaryAnimation;
-  if (Array.isArray(options.materialProperties)) vrm.materialProperties = options.materialProperties;
 
   json.extensions = json.extensions || {};
   json.extensions.VRM = vrm;
@@ -287,7 +268,7 @@ export async function exportVrm0(scene, options = {}) {
       skins: (json.skins || []).length,
       extensions: json.extensionsUsed,
       humanoidBones: humanoid.humanBones.length,
-      note: 'VRM 0.x core: metadata, humanoid and first-person are serialized. BlendShape, MToon material mapping and secondary animation need dedicated tested serializers.',
+      note: 'VRM 0.x core: metadata, humanoid and first-person are serialized. BlendShape, MToon material mapping, thumbnail embedding and secondary animation are not yet serialized.',
     },
   };
 }
