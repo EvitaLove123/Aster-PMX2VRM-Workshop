@@ -80,9 +80,9 @@ function makeMeta(input = {}) {
 
 
 const BLENDSHAPE_PRESETS = new Set([
-  'unknown', 'neutral', 'a', 'i', 'u', 'e', 'o', 'blink',
-  'joy', 'angry', 'sorrow', 'fun', 'lookup', 'lookdown',
-  'lookleft', 'lookright', 'blink_l', 'blink_r',
+  'Unknown', 'Neutral', 'A', 'I', 'U', 'E', 'O', 'Blink',
+  'Joy', 'Angry', 'Sorrow', 'Fun', 'LookUp', 'LookDown',
+  'LookLeft', 'LookRight', 'Blink_L', 'Blink_R',
 ]);
 
 function buildBlendShapeMaster(groups, scene, gltfJson) {
@@ -106,7 +106,7 @@ function buildBlendShapeMaster(groups, scene, gltfJson) {
     if (!group || typeof group !== 'object') {
       throw new TypeError('BlendShape group #' + groupIndex + ' must be an object.');
     }
-    const presetName = String(group.presetName || 'unknown').toLowerCase();
+    const presetName = String(group.presetName || 'Unknown');
     if (!BLENDSHAPE_PRESETS.has(presetName)) {
       throw new Error('Invalid VRM 0.x BlendShape preset: ' + presetName);
     }
