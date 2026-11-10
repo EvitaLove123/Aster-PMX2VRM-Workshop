@@ -78,7 +78,15 @@ document.querySelector('#run').addEventListener('click', async () => {
   log.textContent = 'Exporting…';
   try {
     const {scene, humanoid, body} = makeFixture();
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#8bb8ff';
+    context.fillRect(0, 0, 64, 64);
+    const thumbnail = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     const result = await exportVrm0(scene, {
+      thumbnail,
       humanoid,
       meta: {
         title: 'Aster VRM 0.x Smoke Test',
