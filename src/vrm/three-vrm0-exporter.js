@@ -2,9 +2,9 @@
  * Aster PMX2VRM — legacy VRM 0.x serializer (phase 3 foundation).
  *
  * Writes the monolithic extensions.VRM payload into a GLB produced by
- * Three.js GLTFExporter. This first increment covers metadata, humanoid and
- * first-person references. BlendShape, MToon/materialProperties and
- * secondaryAnimation are opt-in payloads added in later validated increments.
+ * Three.js GLTFExporter. This implementation covers metadata, humanoid and first-person references,
+ * optional BlendShapeMaster groups and an embedded PNG/JPEG thumbnail.
+ * MToon/materialProperties and secondaryAnimation remain future increments.
  */
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { inspectVrm } from './three-vrm-runtime.js';
