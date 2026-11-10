@@ -27,3 +27,25 @@ Three-vrm is not a drop-in VRM exporter. The official documentation describes it
 ## Current status
 
 Phase 1 adapter is added on the migration branch. The production page still uses the existing Unity runtime until later phases are complete.
+
+
+## Phase 2 — VRM 1.0 core serializer (implementation started)
+
+Added `src/vrm/three-vrm-exporter.js`:
+
+- Uses Three.js `GLTFExporter` to produce a binary glTF 2.0 container.
+- Adds the required `VRMC_vrm` extension with `specVersion`, metadata, and humanoid node references.
+- Requires all 15 mandatory VRM 1.0 humanoid bones and rejects missing or ambiguous exported node names.
+- Writes a correctly padded GLB JSON chunk and updates the GLB byte length.
+- Reads the result back through the Three-vrm loader adapter before returning a Blob.
+- Requires a model name, at least one author, and an HTTPS license URL. Defaults to the official VRM 1.0 license URL; license permissions default conservatively.
+
+**Scope boundary:** this is a core serializer scaffold, not yet the complete exporter. It does not yet serialize VRMC_materials_mtoon, VRMC_springBone, expressions, look-at, constraints, or a thumbnail image. It is not wired to the PMX page's production download button. No runtime acceptance test has been run in a real browser yet. Do not use it as a finished converter.
+
+### Phase 2 validation checklist
+
+- [ ] Import/export a minimal humanoid test scene and confirm Three-vrm reads it as VRM 1.0.
+- [ ] Validate the generated file against the official VRM 1.0 JSON schemas / validator.
+- [ ] Confirm GLB chunk lengths and embedded resources.
+- [ ] Confirm skinning, morph targets and texture references survive GLTFExporter.
+- [ ] Only then connect the exporter to the PMX conversion UI.
