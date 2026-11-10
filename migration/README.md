@@ -44,7 +44,7 @@ Added `src/vrm/three-vrm-exporter.js`:
 
 ### Phase 2 validation checklist
 
-- [ ] Import/export a minimal humanoid test scene and confirm Three-vrm reads it as VRM 1.0.
+- [ ] Run [the browser smoke test](../tests/vrm10-export-smoke-test.html) and confirm Three-vrm reads the generated fixture as VRM 1.0.
 - [ ] Validate the generated file against the official VRM 1.0 JSON schemas / validator.
 - [ ] Confirm GLB chunk lengths and embedded resources.
 - [ ] Confirm skinning, morph targets and texture references survive GLTFExporter.
