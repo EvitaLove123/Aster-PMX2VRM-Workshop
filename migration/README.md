@@ -9,7 +9,7 @@ This work is being developed on `migration/three-vrm-browser`. The existing `mai
 - Use Three.js `GLTFExporter` for the base glTF 2.0 binary scene.
 - Implement VRM extension serialization as a separate, explicit export layer. Do not assume three-vrm exports VRM: its documented API is a GLTFLoader plugin.
 - Implement VRM 1.0 and legacy VRM 0.x as separate serializers. Never label a plain GLB as a VRM.
-- Keep the Unity/UniVRM project and current UI intact until browser export passes independent validators and target-app tests.
+- The PMX2VRM page no longer loads or calls Unity/UniVRM. The old Unity files remain in the repository only as an unused rollback archive until the browser exporter is accepted.
 
 ## Phases
 
@@ -18,7 +18,7 @@ This work is being developed on `migration/three-vrm-browser`. The existing `mai
 3. **VRM 0.x exporter:** implement the legacy `VRM` extension independently; validate its metadata, humanoid, materials, blend shapes, and secondary animation.
 4. **PMX conversion integration:** map all existing 49 humanoid roles to glTF node indices, preserve skinning/morph targets/textures, and author metadata/thumbnail.
 5. **Compatibility and performance:** validate on Android Chrome, VRM validators, VRM Viewer, VRoid Hub, VRM Posing Mobile, and Virtual Droid where format support allows.
-6. **Retirement:** only after acceptance tests pass, remove the Unity iframe, runtime bridge, UBA workflow, and `univrm-runtime/` directory.
+6. **Retirement:** after acceptance tests pass, remove the unused Unity runtime source/archive and its CI workflow in a separate cleanup commit.
 
 ## Important technical constraint
 
@@ -26,7 +26,7 @@ Three-vrm is not a drop-in VRM exporter. The official documentation describes it
 
 ## Current status
 
-Phase 1 adapter is added on the migration branch. The production page still uses the existing Unity runtime until later phases are complete.
+Phase 1 adapter is added on the migration branch. The PMX2VRM page now calls the browser-native serializers directly. The old Unity/UniVRM source files remain unused in the repository; no runtime iframe or message bridge is loaded by the page.
 
 
 ## Phase 2 — VRM 1.0 core serializer (implementation started)
@@ -74,3 +74,10 @@ Added `src/vrm/three-vrm0-exporter.js`:
 - [ ] Add tested BlendShapeMaster mapping and thumbnail embedding.
 - [ ] Add tested secondaryAnimation bone groups and collider groups.
 - [ ] Connect to PMX conversion only after real fixture and target-app validation.
+
+
+## Browser-native export buttons (experimental)
+
+The PMX2VRM page now imports the independent VRM 0.x and VRM 1.0 serializers and exposes direct download buttons. The export buttons validate the required mapping for each version, clone the skinned PMX hierarchy, translate the current metadata form, and invoke the corresponding serializer in-browser. VRM 0.x can optionally embed a PNG/JPEG thumbnail. Three-vrm read-back is performed before the download is offered.
+
+**Important:** this wiring is implementation-ready for user testing, not yet independently validated. It does not mean all PMX materials, MToon settings, SpringBone/colliders, or all app-specific requirements are supported. The old Unity/UniVRM directory has not yet been deleted from the repository, but the PMX2VRM page has no dependency on it.
