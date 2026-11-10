@@ -49,3 +49,27 @@ Added `src/vrm/three-vrm-exporter.js`:
 - [ ] Confirm GLB chunk lengths and embedded resources.
 - [ ] Confirm skinning, morph targets and texture references survive GLTFExporter.
 - [ ] Only then connect the exporter to the PMX conversion UI.
+
+
+## Phase 3 — VRM 0.x core serializer (implementation scaffold)
+
+Added `src/vrm/three-vrm0-exporter.js`:
+
+- Writes the legacy monolithic `extensions.VRM` extension with `specVersion: "0.0"`.
+- Writes VRM 0.x metadata using legacy property names and permission enums.
+- Maps the required legacy humanoid bones to glTF node indices and rejects missing or ambiguous names.
+- Writes a first-person bone reference and default offset.
+- Preserves the base GLB binary chunk and reads the result back through Three-vrm.
+- Exposes explicit optional payload slots for blendShapeMaster, secondaryAnimation, and materialProperties, but these payloads are not yet produced by dedicated converters.
+
+**Scope boundary:** this is only the VRM 0.x core scaffold. It does not yet translate PMX material settings into MToon materialProperties, map GLTF morph target indices into BlendShape groups, convert PMX hair/cloth physics into secondaryAnimation, or embed a thumbnail. It is not wired to the production PMX download button. The smoke test is source-only and has not been run in a real browser.
+
+### VRM 0.x validation checklist
+
+- [ ] Run [the browser smoke test](../tests/vrm0-export-smoke-test.html) and confirm Three-vrm identifies the result as VRM 0.x.
+- [ ] Validate the GLB against the official VRM 0.0 JSON schemas.
+- [ ] Verify legacy humanoid requirements, T-pose, -Z facing and bone transforms.
+- [ ] Add tested materialProperties / MToon conversion.
+- [ ] Add tested BlendShapeMaster mapping and thumbnail embedding.
+- [ ] Add tested secondaryAnimation bone groups and collider groups.
+- [ ] Connect to PMX conversion only after real fixture and target-app validation.
