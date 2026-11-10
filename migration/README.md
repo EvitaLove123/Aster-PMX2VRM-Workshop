@@ -60,7 +60,7 @@ Added `src/vrm/three-vrm0-exporter.js`:
 - Maps the required legacy humanoid bones to glTF node indices and rejects missing or ambiguous names.
 - Writes a first-person bone reference and default offset.
 - Preserves the base GLB binary chunk and reads the result back through Three-vrm.
-- Exposes explicit optional payload slots for blendShapeMaster, secondaryAnimation, and materialProperties, but these payloads are not yet produced by dedicated converters.
+- Serializes BlendShapeMaster groups when supplied: maps a Three.js mesh plus morph target name/index to glTF mesh and target indices, and validates bind weights and preset names.
 
 **Scope boundary:** this is only the VRM 0.x core scaffold. It does not yet translate PMX material settings into MToon materialProperties, map GLTF morph target indices into BlendShape groups, convert PMX hair/cloth physics into secondaryAnimation, or embed a thumbnail. It is not wired to the production PMX download button. The smoke test is source-only and has not been run in a real browser.
 
