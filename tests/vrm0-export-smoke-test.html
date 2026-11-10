@@ -56,20 +56,28 @@ function makeFixture() {
   const rUpperLeg = add('rightUpperLeg', hips, -.2);
   const rLowerLeg = add('rightLowerLeg', rUpperLeg, -.4);
   add('rightFoot', rLowerLeg, -.4);
+  const geometry = new THREE.CapsuleGeometry(.18, .8, 4, 8);
+  const target = geometry.attributes.position.clone();
+  for (let i = 0; i < target.count; i++) {
+    target.setY(i, target.getY(i) + 0.015);
+  }
+  geometry.morphAttributes.position = [target];
   const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(.18, .8, 4, 8),
+    geometry,
     new THREE.MeshStandardMaterial({color:0x8bb8ff, roughness:1})
   );
   body.name = 'SmokeTestBody';
+  body.morphTargetDictionary = {Blink:0};
+  body.morphTargetInfluences = [0];
   body.position.y = 1.2;
   root.add(body);
-  return {scene, humanoid};
+  return {scene, humanoid, body};
 }
 
 document.querySelector('#run').addEventListener('click', async () => {
   log.textContent = 'Exporting…';
   try {
-    const {scene, humanoid} = makeFixture();
+    const {scene, humanoid, body} = makeFixture();
     const result = await exportVrm0(scene, {
       humanoid,
       meta: {
@@ -80,7 +88,13 @@ document.querySelector('#run').addEventListener('click', async () => {
         sexualUssageName: 'Disallow',
         commercialUssageName: 'Disallow',
         licenseName: 'Redistribution_Prohibited'
-      }
+      },
+      blendShapeGroups: [{
+        name: 'Blink',
+        presetName: 'blink',
+        binds: [{mesh: body, target: 'Blink', weight: 1}],
+        isBinary: true
+      }]
     });
     log.textContent = JSON.stringify(result.report, null, 2) +
       '\n\nPASS: Three-vrm loaded the generated file as VRM 0.x.';
