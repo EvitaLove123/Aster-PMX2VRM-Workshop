@@ -1,0 +1,33 @@
+name: VRM exporter static checks
+
+on:
+  push:
+    branches:
+      - migration/three-vrm-browser
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check VRM exporter modules
+        run: |
+          node --input-type=module --check < src/vrm/three-vrm-runtime.js
+          node --input-type=module --check < src/vrm/three-vrm-exporter.js
+          node --input-type=module --check < src/vrm/three-vrm0-exporter.js
+      - name: Check PMX2VRM page module and verify no Unity/UniVRM bridge remains
+        run: |
+          sed -n '/<script type="module">/,/<\/script>/p' index.html | sed '1d;$d' | node --input-type=module --check
+          if grep -Eiq 'univrm|aster-univrm|Unity' index.html; then echo "Legacy Unity/UniVRM references remain in index.html"; exit 1; fi
+      - name: Check VRM 0.x browser test module syntax
+        run: |
+          sed -n '/<script type="module">/,/<\/script>/p' tests/vrm0-export-smoke-test.html | sed '1d;$d' | node --input-type=module --check
+      - name: Check VRM 1.0 browser test module syntax
+        run: |
+          sed -n '/<script type="module">/,/<\/script>/p' tests/vrm10-export-smoke-test.html | sed '1d;$d' | node --input-type=module --check
