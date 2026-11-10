@@ -224,6 +224,61 @@ function writeGlb(json, chunks) {
   return output;
 }
 
+
+async function embedThumbnail(json, chunks, thumbnail) {
+  if (thumbnail == null) return null;
+  let blob;
+  if (thumbnail instanceof Blob) {
+    blob = thumbnail;
+  } else if (thumbnail?.data instanceof ArrayBuffer && typeof thumbnail.mimeType === 'string') {
+    blob = new Blob([thumbnail.data], { type: thumbnail.mimeType });
+  } else {
+    throw new TypeError('thumbnail must be a PNG/JPEG Blob or {data:ArrayBuffer,mimeType}.');
+  }
+  const mimeType = blob.type.toLowerCase();
+  if (!['image/png', 'image/jpeg'].includes(mimeType)) {
+    throw new Error('VRM 0.x thumbnail must be PNG or JPEG.');
+  }
+  if (blob.size === 0 || blob.size > 8 * 1024 * 1024) {
+    throw new Error('Thumbnail must be between 1 byte and 8 MiB.');
+  }
+
+  const binChunk = chunks.find((chunk) => chunk.type === 0x004e4942);
+  if (!binChunk) throw new Error('Cannot embed thumbnail: GLB BIN chunk is missing.');
+  if (!Array.isArray(json.buffers) || !json.buffers[0]) {
+    throw new Error('Cannot embed thumbnail: GLB buffer definition is missing.');
+  }
+
+  const imageBytes = new Uint8Array(await blob.arrayBuffer());
+  const oldBufferLength = Number(json.buffers[0].byteLength);
+  if (!Number.isInteger(oldBufferLength) || oldBufferLength < 0 || oldBufferLength > binChunk.bytes.length) {
+    throw new Error('GLB buffer byteLength is invalid.');
+  }
+  const byteOffset = Math.ceil(oldBufferLength / 4) * 4;
+  const unpaddedLength = byteOffset + imageBytes.length;
+  const paddedLength = Math.ceil(unpaddedLength / 4) * 4;
+  const nextBin = new Uint8Array(paddedLength);
+  nextBin.set(binChunk.bytes.subarray(0, oldBufferLength), 0);
+  nextBin.set(imageBytes, byteOffset);
+  binChunk.bytes = nextBin;
+
+  json.buffers[0].byteLength = unpaddedLength;
+  json.bufferViews = json.bufferViews || [];
+  json.images = json.images || [];
+  json.textures = json.textures || [];
+  const bufferViewIndex = json.bufferViews.length;
+  const imageIndex = json.images.length;
+  const textureIndex = json.textures.length;
+  json.bufferViews.push({
+    buffer: 0,
+    byteOffset,
+    byteLength: imageBytes.length,
+  });
+  json.images.push({ bufferView: bufferViewIndex, mimeType });
+  json.textures.push({ source: imageIndex });
+  return textureIndex;
+}
+
 function mapNodes(scene, gltfJson, mapping) {
   if (!mapping || typeof mapping !== 'object') throw new Error('Humanoid mapping is required.');
 
@@ -268,6 +323,7 @@ function mapNodes(scene, gltfJson, mapping) {
  * @param {object} options.meta Legacy VRM 0.x metadata.
  * @param {object} [options.firstPerson] Optional first-person settings.
  * @param {Array<object>} [options.blendShapeGroups] Groups with binds { mesh: Three.js Mesh, target: morph name or index, weight }.
+ * @param {Blob|{data:ArrayBuffer,mimeType:string}} [options.thumbnail] PNG/JPEG thumbnail to embed in the GLB.
  *  */
 export async function exportVrm0(scene, options = {}) {
   if (!scene || typeof scene.traverse !== 'function') {
@@ -289,6 +345,11 @@ export async function exportVrm0(scene, options = {}) {
   }
 
   const { json, chunks } = readGlb(baseGlb);
+  const thumbnailTextureIndex = await embedThumbnail(json, chunks, options.thumbnail);
+  if (thumbnailTextureIndex !== null) meta.texture = thumbnailTextureIndex;
+  else if (meta.texture !== undefined && meta.texture >= (json.textures || []).length) {
+    throw new Error('VRM 0.x meta.texture references a missing glTF texture.');
+  }
   const humanoid = mapNodes(scene, json, options.humanoid);
   const head = options.humanoid.head;
   const headNode = humanoid.byObject.get(head);
@@ -355,7 +416,8 @@ export async function exportVrm0(scene, options = {}) {
       extensions: json.extensionsUsed,
       humanoidBones: humanoid.humanBones.length,
       blendShapeGroups: blendShapeMaster?.blendShapeGroups.length || 0,
-      note: 'VRM 0.x core: metadata, humanoid and first-person are serialized. MToon material mapping, thumbnail embedding and secondary animation are not yet serialized.',
+      thumbnailTextureIndex,
+      note: 'VRM 0.x core: metadata, humanoid and first-person are serialized. MToon material mapping and secondary animation are not yet serialized.',
     },
   };
 }
