@@ -78,6 +78,88 @@ function makeMeta(input = {}) {
   return meta;
 }
 
+
+const BLENDSHAPE_PRESETS = new Set([
+  'unknown', 'neutral', 'a', 'i', 'u', 'e', 'o', 'blink',
+  'joy', 'angry', 'sorrow', 'fun', 'lookup', 'lookdown',
+  'lookleft', 'lookright', 'blink_l', 'blink_r',
+]);
+
+function buildBlendShapeMaster(groups, scene, gltfJson) {
+  if (groups == null) return undefined;
+  if (!Array.isArray(groups)) throw new TypeError('blendShapeGroups must be an array.');
+
+  const sceneMeshCounts = new Map();
+  scene.traverse((object) => {
+    if (!object.isMesh || !object.name) return;
+    sceneMeshCounts.set(object.name, (sceneMeshCounts.get(object.name) || 0) + 1);
+  });
+  const gltfMeshesByNodeName = new Map();
+  gltfJson.nodes.forEach((node) => {
+    if (node.mesh === undefined || !node.name) return;
+    const list = gltfMeshesByNodeName.get(node.name) || [];
+    list.push(node.mesh);
+    gltfMeshesByNodeName.set(node.name, list);
+  });
+
+  const blendShapeGroups = groups.map((group, groupIndex) => {
+    if (!group || typeof group !== 'object') {
+      throw new TypeError('BlendShape group #' + groupIndex + ' must be an object.');
+    }
+    const presetName = String(group.presetName || 'unknown').toLowerCase();
+    if (!BLENDSHAPE_PRESETS.has(presetName)) {
+      throw new Error('Invalid VRM 0.x BlendShape preset: ' + presetName);
+    }
+    const binds = (group.binds || []).map((bind, bindIndex) => {
+      const meshObject = bind?.mesh;
+      if (!meshObject?.isMesh || !meshObject.name) {
+        throw new Error('BlendShape bind #' + bindIndex + ' must reference a Three.js Mesh.');
+      }
+      if (sceneMeshCounts.get(meshObject.name) !== 1) {
+        throw new Error('BlendShape mesh name is missing or duplicated: ' + meshObject.name);
+      }
+      const meshIndices = gltfMeshesByNodeName.get(meshObject.name) || [];
+      if (meshIndices.length !== 1) {
+        throw new Error('BlendShape mesh was not exported uniquely: ' + meshObject.name);
+      }
+      const meshIndex = meshIndices[0];
+      const gltfMesh = gltfJson.meshes?.[meshIndex];
+      const primitives = gltfMesh?.primitives || [];
+      if (!primitives.length) throw new Error('Exported BlendShape mesh has no primitives.');
+      const targetCounts = primitives.map((primitive) => (primitive.targets || []).length);
+      if (targetCounts.some((count) => count !== targetCounts[0])) {
+        throw new Error('BlendShape target counts differ across mesh primitives.');
+      }
+      const targetNames = gltfMesh.extras?.targetNames || [];
+      let targetIndex;
+      if (Number.isInteger(bind.target)) {
+        targetIndex = bind.target;
+      } else if (typeof bind.target === 'string' && bind.target.trim()) {
+        targetIndex = targetNames.indexOf(bind.target.trim());
+      } else {
+        throw new Error('BlendShape bind must specify target name or index.');
+      }
+      if (targetIndex < 0 || targetIndex >= targetCounts[0]) {
+        throw new Error('BlendShape target not found on mesh ' + meshObject.name + ': ' + bind.target);
+      }
+      const weight = bind.weight === undefined ? 1 : Number(bind.weight);
+      if (!Number.isFinite(weight) || weight < 0 || weight > 1) {
+        throw new Error('BlendShape bind weight must be between 0 and 1.');
+      }
+      return { mesh: meshIndex, index: targetIndex, weight };
+    });
+    const result = {
+      name: String(group.name || group.presetName || 'Unknown'),
+      presetName,
+      binds,
+      materialValues: Array.isArray(group.materialValues) ? group.materialValues : [],
+      isBinary: group.isBinary === true,
+    };
+    return result;
+  });
+  return { blendShapeGroups };
+}
+
 function readGlb(arrayBuffer) {
   const view = new DataView(arrayBuffer);
   if (view.byteLength < 20 ||
@@ -185,6 +267,7 @@ function mapNodes(scene, gltfJson, mapping) {
  * @param {Record<string, import('three').Object3D>} options.humanoid VRM bone name -> Three.js Bone.
  * @param {object} options.meta Legacy VRM 0.x metadata.
  * @param {object} [options.firstPerson] Optional first-person settings.
+ * @param {Array<object>} [options.blendShapeGroups] Groups with binds { mesh: Three.js Mesh, target: morph name or index, weight }.
  *  */
 export async function exportVrm0(scene, options = {}) {
   if (!scene || typeof scene.traverse !== 'function') {
@@ -228,6 +311,8 @@ export async function exportVrm0(scene, options = {}) {
     lookAtTypeName: firstPersonInput.lookAtTypeName === 'BlendShape' ? 'BlendShape' : 'Bone',
   };
 
+  const blendShapeMaster = buildBlendShapeMaster(options.blendShapeGroups, scene, json);
+
   const vrm = {
     specVersion: '0.0',
     exporterVersion: 'Aster PMX2VRM Browser',
@@ -245,6 +330,7 @@ export async function exportVrm0(scene, options = {}) {
     },
     firstPerson,
   };
+  if (blendShapeMaster) vrm.blendShapeMaster = blendShapeMaster;
 
   json.extensions = json.extensions || {};
   json.extensions.VRM = vrm;
@@ -268,7 +354,8 @@ export async function exportVrm0(scene, options = {}) {
       skins: (json.skins || []).length,
       extensions: json.extensionsUsed,
       humanoidBones: humanoid.humanBones.length,
-      note: 'VRM 0.x core: metadata, humanoid and first-person are serialized. BlendShape, MToon material mapping, thumbnail embedding and secondary animation are not yet serialized.',
+      blendShapeGroups: blendShapeMaster?.blendShapeGroups.length || 0,
+      note: 'VRM 0.x core: metadata, humanoid and first-person are serialized. MToon material mapping, thumbnail embedding and secondary animation are not yet serialized.',
     },
   };
 }
