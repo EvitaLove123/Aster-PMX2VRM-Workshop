@@ -526,7 +526,7 @@ function prepareExportRoot() {
     if (Number.isInteger(index) && clonedBones[index]) humanoid[slot] = clonedBones[index];
   }
   if ($('autoTPose').checked) applyAutoTPose(humanoid, wrapper);
-  if ($('rotate180').checked) wrapper.rotation.y = Math.PI;
+  if ($('rotate180').checked) root.rotation.y = Math.PI;
   wrapper.updateMatrixWorld(true);
   return { wrapper, humanoid };
 }
