@@ -24,9 +24,9 @@ This is an experimental browser converter, not a guarantee of compatibility with
 
 The PMX preview is not identical to every MMD renderer. Some toon shading, IK, physics, and legacy texture formats may differ. Preserve your original PMX and texture files.
 
-## Run on GitHub Pages
+## GitHub Pages deployment
 
-Publish the `lite` branch from **Settings → Pages → Deploy from a branch → lite / root**, or use a separate Pages site. Open the published page in Android Chrome.
+The `lite` branch includes `.github/workflows/deploy-lite-pages.yml`. Each push to this branch publishes only `index.html` and the two browser VRM 0.x modules; the legacy Unity runtime is not part of the deployed site. GitHub Pages must use **GitHub Actions** as its deployment source.
 
 ## Third-party libraries
 
