@@ -488,38 +488,22 @@ function updateExportButtons() {
   }
 }
 function getBrowserMeta(format) {
+  if (format !== '0.x') throw new Error('This Lite edition exports VRM 0.x only.');
   const title = $('metaName').value.trim() || sourceModelFileName || 'Aster Model';
   const author = $('metaAuthor').value.trim();
   if (!author) throw new Error('Please enter an Author in Model information.');
-  if (format === '0.x') {
-    const licenseMap = {
-      Redistribution_Prohibited:'Redistribution_Prohibited',
-      CC0:'CC0', CC_BY:'CC_BY', CC_BY_NC:'CC_BY_NC',
-      CC_BY_NC_SA:'CC_BY_NC_SA', Other:'Other'
-    };
-    return {
-      title, author, version:$('metaVersion').value.trim(),
-      contactInformation:$('metaContact').value.trim(),
-      reference:$('metaReference').value.trim(),
-      allowedUserName:$('metaAllowed').value,
-      licenseName:licenseMap[$('metaLicense').value] || 'Redistribution_Prohibited',
-      commercialUssageName:$('metaCommercial').value,
-      violentUssageName:$('metaViolent').value,
-      sexualUssageName:$('metaSexual').value,
-      otherLicenseUrl:$('metaOther').value.trim()
-    };
-  }
-  const permission = $('metaAllowed').value;
-  const commercial = $('metaCommercial').value === 'Allow' ? 'personalProfit' : 'personalNonProfit';
   return {
-    name:title, authors:[author], version:$('metaVersion').value.trim(),
-    contactInformation:$('metaContact').value.trim(),
-    references:$('metaReference').value.trim() ? [$('metaReference').value.trim()] : [],
-    licenseUrl:'https://vrm.dev/licenses/1.0/',
-    avatarPermission:permission === 'Everyone' ? 'everyone' : permission === 'ExplicitlyLicensedPerson' ? 'onlySeparatelyLicensedPerson' : 'onlyAuthor',
-    commercialUsage:commercial, creditNotation:'required', modification:'prohibited',
-    allowExcessivelyViolentUsage:$('metaViolent').value === 'Allow',
-    allowExcessivelySexualUsage:$('metaSexual').value === 'Allow'
+    title,
+    author,
+    version: $('metaVersion').value.trim() || '1.0',
+    contactInformation: '',
+    reference: '',
+    allowedUserName: 'Everyone',
+    licenseName: 'Redistribution_Prohibited',
+    commercialUssageName: 'Disallow',
+    violentUssageName: 'Disallow',
+    sexualUssageName: 'Disallow',
+    otherLicenseUrl: ''
   };
 }
 function prepareExportRoot() {
