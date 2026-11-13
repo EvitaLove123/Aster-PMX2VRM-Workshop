@@ -28,7 +28,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <body>
 <header>✦ ASTER PMX2VRM LITE <span style="font-weight:500;color:#68778c">/ MOBILE EDITION</span></header>
 <main>
-<section class="hero"><small>LIGHTWEIGHT MMD CONVERTER</small><h1>PMX → VRM 0.x</h1><p>Load a PMX model, preview it, map its Humanoid bones, add model information, and export a VRM 0.x file locally in your browser.</p></section>
+<section class="hero"><small>LIGHTWEIGHT MMD CONVERTER</small><h1>PMX → VRM 0.x</h1><p>Load a PMX model, map its Humanoid bones, add model information, and export a VRM 0.x file locally in your browser.</p></section>
 <section class="card">
 <h2>1. Import PMX</h2>
 <div class="drop"><strong>Option A — Import a complete ZIP package</strong><br><input id="zip" type="file" accept=".zip,application/zip"><p class="note">Recommended: select a ZIP containing one PMX and its texture folders. The workshop will locate the PMX and prepare texture assets automatically.</p></div>
@@ -180,8 +180,7 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     if (!model || !model.isSkinnedMesh || !model.geometry || !model.skeleton) {
       throw new Error('MMDLoader did not produce a valid skinned PMX model.');
     }
-    // Center the actual skinned preview and place its lowest point on the grid.
-    // Keep the imported PMX mesh and its bind pose untouched inside a preview group.
+    // Center the imported model for export while keeping its bind pose untouched.
     model.updateMatrixWorld(true);
     if (typeof model.computeBoundingBox === 'function') model.computeBoundingBox();
     const modelBounds = model.boundingBox
@@ -207,12 +206,12 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     buildMappingEditor();
     autoMapBones();
     $('details').textContent = 'PMX data parsed. Core-body and finger Humanoid mapping are available as preparation tools; they do not yet validate skin weights, IK, physics, or VRM compatibility.';
-    setStatus('PMX parsed — preview ready', 'good');
+    setStatus('PMX parsed — ready to map and export', 'good');
   } catch (err) {
     console.error(err);
     const reason = err && err.message ? err.message : String(err);
     setStatus('PMX load failed: ' + reason.slice(0, 90), 'bad');
-    $('details').textContent = 'PMX loading error: ' + reason + ' Check that the file is a valid PMX. Some texture formats may not be supported in this preview yet.';
+    $('details').textContent = 'PMX loading error: ' + reason + ' Check that the file is a valid PMX. Some texture formats may not be supported yet.';
   }
 }
 
@@ -433,7 +432,7 @@ function getBrowserMeta(format) {
 function prepareExportRoot() {
   currentModel.updateMatrixWorld(true);
   const pmxRoot = currentModel.children[0];
-  if (!pmxRoot) throw new Error('Could not find the PMX model node inside the preview.');
+  if (!pmxRoot) throw new Error('Could not find the PMX model node in the imported PMX model.');
   const root = cloneSkeleton(pmxRoot);
   root.position.copy(currentModel.position);
   root.quaternion.copy(currentModel.quaternion);
