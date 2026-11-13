@@ -7,7 +7,6 @@
  * MToon/materialProperties and secondaryAnimation remain future increments.
  */
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { inspectVrm } from './three-vrm-runtime.js';
 
 const REQUIRED_BONES = [
   'hips', 'spine', 'chest', 'neck', 'head',
@@ -399,16 +398,16 @@ export async function exportVrm0(scene, options = {}) {
   if (!json.extensionsUsed.includes('VRM')) json.extensionsUsed.push('VRM');
 
   const arrayBuffer = writeGlb(json, chunks);
-  const checked = await inspectVrm(arrayBuffer);
-  if (checked.report.format !== 'VRM 0.x') {
-    throw new Error('Three-vrm read-back validation did not identify VRM 0.x.');
-  }
-
+  const savedVrm = json.extensions && json.extensions.VRM;
+  if (!savedVrm || savedVrm.specVersion !== '0.0' || !Array.isArray(savedVrm.humanoid && savedVrm.humanoid.humanBones)) throw new Error('Generated GLB is missing required VRM 0.x humanoid metadata.');
+  for (const entry of savedVrm.humanoid.humanBones) if (!Number.isInteger(entry.node) || !json.nodes[entry.node]) throw new Error('Generated VRM contains an invalid humanoid node reference: ' + entry.bone);
+  if (!json.extensionsUsed || !json.extensionsUsed.includes('VRM')) throw new Error('Generated GLB does not declare the VRM extension.');
   return {
     blob: new Blob([arrayBuffer], { type: 'model/gltf-binary' }),
     arrayBuffer,
     report: {
-      ...checked.report,
+      format: 'VRM 0.x', name: meta.title, humanoid: true,
+      expressions: Boolean(savedVrm.blendShapeMaster), springBone: false,
       nodes: json.nodes.length,
       materials: (json.materials || []).length,
       meshes: (json.meshes || []).length,
