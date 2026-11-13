@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f5f7fc">
-<title>Aster PMX2VRM Workshop</title>
+<title>Aster PMX2VRM Lite</title>
 <style>
 :root{color-scheme:light;--bg:#f5f7fc;--panel:#fff;--ink:#1e2a3b;--muted:#68778c;--line:#e3e9f2;--blue:#5479b8;--good:#e8f6ee;--warn:#fff4df;--bad:#ffeded}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
@@ -26,9 +26,9 @@ ul{padding-left:21px}.done{color:#23633b}
 </script>
 </head>
 <body>
-<header>✦ ASTER WORKSHOP <span style="font-weight:500;color:#68778c">/ PMX2VRM · MOBILE EDITION</span></header>
+<header>✦ ASTER PMX2VRM LITE <span style="font-weight:500;color:#68778c">/ MOBILE EDITION</span></header>
 <main>
-<section class="hero"><small>MMD CONVERSION WORKBENCH</small><h1>PMX → VRM 0.x / 1.0</h1><p>Import an MMD PMX model, inspect its 3D appearance, and prepare it for a verified conversion workflow.</p></section>
+<section class="hero"><small>LIGHTWEIGHT MMD CONVERTER</small><h1>PMX → VRM 0.x</h1><p>Load a PMX model, preview it, map its Humanoid bones, add model information, and export a VRM 0.x file locally in your browser.</p></section>
 <section class="card">
 <h2>1. Import PMX</h2>
 <div class="drop"><strong>Option A — Import a complete ZIP package</strong><br><input id="zip" type="file" accept=".zip,application/zip"><p class="note">Recommended: select a ZIP containing one PMX and its texture folders. The workshop will locate the PMX and prepare texture assets automatically.</p></div>
@@ -90,12 +90,12 @@ ul{padding-left:21px}.done{color:#23633b}
 </section>
 <section class="card" id="exportCard">
 <h2>5. Download VRM</h2>
-<p class="note">Export runs locally in this browser. Complete the required Humanoid mapping first. VRM 0.x and VRM 1.0 are generated independently.</p>
+<p class="note">Export runs locally in this browser. Complete the required Humanoid mapping first. This Lite edition exports VRM 0.x only.</p>
 <div class="map-tools">
 <button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
-<button id="exportVrm1" type="button" disabled>Download VRM 1.0</button>
+
 </div>
-<div class="map-summary" id="exportStatus">Load a PMX model, complete its required Humanoid mapping, then choose a VRM format to test.</div>
+<div class="map-summary" id="exportStatus">Load a PMX model, complete its required Humanoid mapping, then export VRM 0.x.</div>
 </section>
 
 
@@ -123,7 +123,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <li>Humanoid mapping includes core body and finger roles. Browser-native VRM export is now wired for testing, but both formats still need independent schema-validator and target-app checks. Expressions, MMD physics conversion, SpringBone authoring, and complete VRM validation remain unfinished.</li>
 </ul>
 </section>
-<p class="note" style="text-align:center">ASTER PMX2VRM WORKSHOP · Android-first · English UI</p>
+<p class="note" style="text-align:center">ASTER PMX2VRM LITE · Android-first · English UI</p>
 </main>
 <script type="module">
 import * as THREE from 'three';
@@ -132,7 +132,6 @@ import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { exportVrm0 } from './src/vrm/three-vrm0-exporter.js';
-import { exportVrm10 } from './src/vrm/three-vrm-exporter.js';
 import JSZip from 'jszip';
 
 const $ = id => document.getElementById(id);
@@ -511,21 +510,16 @@ function updateMetadataSummary() {
 updateMetadataSummary();
 
 const REQUIRED_0X = ['hips','spine','chest','neck','head','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot'];
-const REQUIRED_1X = ['hips','spine','head','leftUpperArm','leftLowerArm','leftHand','rightUpperArm','rightLowerArm','rightHand','leftUpperLeg','leftLowerLeg','leftFoot','rightUpperLeg','rightLowerLeg','rightFoot'];
 function getRequiredMissing(required) {
   return required.filter(slot => !Number.isInteger(humanoidMapping[slot]) || !sourceBones[humanoidMapping[slot]]);
 }
 function updateExportButtons() {
-  const missing0 = getRequiredMissing(REQUIRED_0X);
-  const missing1 = getRequiredMissing(REQUIRED_1X);
-  $('exportVrm0').disabled = !currentModel || exportBusy || missing0.length > 0;
-  $('exportVrm1').disabled = !currentModel || exportBusy || missing1.length > 0;
+  const missing = getRequiredMissing(REQUIRED_0X);
+  $('exportVrm0').disabled = !currentModel || exportBusy || missing.length > 0;
   if (currentModel) {
-    const notes = [];
-    if (missing0.length) notes.push('0.x missing: '+missing0.join(', '));
-    if (missing1.length) notes.push('1.0 missing: '+missing1.join(', '));
-    if (notes.length) $('exportStatus').textContent = notes.join(' · ');
-    else $('exportStatus').textContent = 'Required Humanoid mappings are present. Choose VRM 0.x or 1.0 to export a test file.';
+    $('exportStatus').textContent = missing.length
+      ? 'VRM 0.x missing required mappings: ' + missing.join(', ')
+      : 'Required Humanoid mappings are present. Ready to export VRM 0.x.';
   }
 }
 function getBrowserMeta(format) {
@@ -668,7 +662,6 @@ async function runVrmExport(format) {
   }
 }
 $('exportVrm0').addEventListener('click', () => runVrmExport('0.x'));
-$('exportVrm1').addEventListener('click', () => runVrmExport('1.0'));
 $('downloadGlb').addEventListener('click', async () => {
   if (!currentModel) { $('glbStatus').textContent = 'Load a PMX model first.'; return; }
   const button = $('downloadGlb');
