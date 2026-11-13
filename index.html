@@ -137,12 +137,6 @@ textureInput.addEventListener('change', () => {
   for (const file of files) addTextureBlob(file.webkitRelativePath || file.name, file);
   $('textureCount').textContent = String(files.length);
 });
-$('reset').addEventListener('click', () => { if (currentModel) frameModel(currentModel); });
-$('skeleton').addEventListener('click', () => {
-  if (!skeletonHelper) return;
-  showBones = !showBones; skeletonHelper.visible = showBones;
-  $('skeleton').textContent = showBones ? 'Hide skeleton' : 'Show skeleton';
-});
 async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
   clearModel();
   setStatus('Preparing model and textures…');
@@ -537,77 +531,6 @@ async function runVrmExport() {
   }
 }
 $('exportVrm0').addEventListener('click', runVrmExport);
-$('downloadGlb').addEventListener('click', async () => {
-  if (!currentModel) { $('glbStatus').textContent = 'Load a PMX model first.'; return; }
-  const button = $('downloadGlb');
-  button.disabled = true;
-  $('glbStatus').textContent = 'Preparing a GLB-compatible copy…';
-  let exportRoot = null;
-  try {
-    // Clone only the actual PMX model child. Never clone the preview wrapper,
-    // because it also contains SkeletonHelper, which cannot be cloned safely.
-    currentModel.updateMatrixWorld(true);
-    const pmxRoot = currentModel.children[0];
-    if (!pmxRoot) throw new Error('Could not find the PMX model node inside the preview.');
-    exportRoot = cloneSkeleton(pmxRoot);
-    exportRoot.position.copy(currentModel.position);
-    exportRoot.quaternion.copy(currentModel.quaternion);
-    exportRoot.scale.copy(currentModel.scale);
-    exportRoot.name = $('metaName').value.trim() || sourceModelFileName || 'Aster_Model';
-    exportRoot.traverse(obj => {
-      if (!obj.isMesh) return;
-      obj.frustumCulled = false;
-      const convert = material => {
-        const standard = new THREE.MeshStandardMaterial({
-          name: material.name || 'PMX Material',
-          color: material.color ? material.color.clone() : new THREE.Color(0xffffff),
-          map: material.map || null,
-          alphaMap: material.alphaMap || null,
-          transparent: !!material.transparent,
-          opacity: material.opacity == null ? 1 : material.opacity,
-          side: material.side == null ? THREE.DoubleSide : material.side,
-          roughness: 0.85,
-          metalness: 0
-        });
-        if (material.emissive) standard.emissive.copy(material.emissive);
-        if (material.emissiveMap) standard.emissiveMap = material.emissiveMap;
-        if (material.vertexColors) standard.vertexColors = true;
-        return standard;
-      };
-      obj.material = Array.isArray(obj.material) ? obj.material.map(convert) : convert(obj.material || {});
-    });
-    const exportScene = new THREE.Group();
-    exportScene.name = 'Aster_GL B_Preview'.replace(/\s+/g, '');
-    exportScene.add(exportRoot);
-    exportScene.updateMatrixWorld(true);
-    $('glbStatus').textContent = 'Converting model and textures to GLB…';
-    const exporter = new GLTFExporter();
-    const result = await exporter.parseAsync(exportScene, {binary:true, onlyVisible:true});
-    if (!(result instanceof ArrayBuffer)) throw new Error('Exporter did not return a binary GLB file.');
-    const blob = new Blob([result], {type:'model/gltf-binary'});
-    if (!blob.size) throw new Error('The generated GLB file is empty.');
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    const base = ($('metaName').value.trim() || sourceModelFileName || 'Aster_Model').replace(/[^a-z0-9_-]+/gi,'_');
-    anchor.href = url; anchor.download = base+'_Preview.glb';
-    anchor.style.display = 'none'; document.body.appendChild(anchor); anchor.click(); anchor.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-    $('glbStatus').textContent = 'GLB generated ('+(blob.size/1048576).toFixed(2)+' MB). If Android did not start the download, check Chrome Downloads and allow downloads for this site. This is a preview GLB, not a VRM avatar.';
-  } catch (error) {
-    console.error('GLB export diagnostic:', error);
-    const message = error && error.message ? error.message : String(error);
-    const stack = error && error.stack ? error.stack.split('\n').slice(0,5).join(' | ') : 'No stack trace available';
-    $('glbStatus').textContent = 'GLB export failed: ' + message + ' — Details: ' + stack;
-  } finally {
-    if (exportRoot) exportRoot.traverse(obj => {
-      // Geometry and texture maps are shared with the preview model.
-      if (obj.material) for (const material of (Array.isArray(obj.material) ? obj.material : [obj.material])) material.dispose();
-    });
-    button.disabled = false;
-  }
-});
-
-
 input.addEventListener('change', async () => {
   const file = input.files && input.files[0]; if (!file) return;
   zipInput.value = '';
