@@ -73,9 +73,14 @@ ul{padding-left:21px}.done{color:#23633b}
 <section class="card" id="exportCard">
 <h2>5. Download VRM</h2>
 <p class="note">Export runs locally in this browser. Complete the required Humanoid mapping first. This Lite edition exports VRM 0.x only.</p>
+<div class="field" style="margin-bottom:10px">
+<label><input id="autoTPose" type="checkbox" checked> Apply Auto T-pose during export</label>
+<p class="note">Adjusts the cloned arm bones toward a horizontal T-pose. The imported PMX and its original pose are not changed.</p>
+<label><input id="rotate180" type="checkbox"> Rotate model 180° around vertical axis (Y)</label>
+<p class="note">Changes the model's facing direction only. It does not correct an upside-down model.</p>
+</div>
 <div class="map-tools">
 <button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
-
 </div>
 <div class="map-summary" id="exportStatus">Load a PMX model, complete its required Humanoid mapping, then export VRM 0.x.</div>
 </section>
@@ -429,6 +434,44 @@ function getBrowserMeta(format) {
     otherLicenseUrl: ''
   };
 }
+function alignBoneTowardWorldDirection(bone, child, targetDirection) {
+  if (!bone || !child || !bone.parent) return false;
+  wrapperUpdate();
+  const start = bone.getWorldPosition(new THREE.Vector3());
+  const end = child.getWorldPosition(new THREE.Vector3());
+  const currentDirection = end.sub(start);
+  if (currentDirection.lengthSq() < 1e-10) return false;
+  currentDirection.normalize();
+  const target = targetDirection.clone().normalize();
+  const delta = new THREE.Quaternion().setFromUnitVectors(currentDirection, target);
+  const worldQuaternion = bone.getWorldQuaternion(new THREE.Quaternion());
+  worldQuaternion.premultiply(delta);
+  const parentWorld = bone.parent.getWorldQuaternion(new THREE.Quaternion());
+  bone.quaternion.copy(parentWorld.invert().multiply(worldQuaternion));
+  bone.updateMatrix();
+  wrapperUpdate();
+  return true;
+}
+function wrapperUpdate() {
+  if (currentModel) currentModel.updateMatrixWorld(true);
+}
+function applyAutoTPose(humanoid, wrapper) {
+  const hips = humanoid.hips;
+  const hipsPosition = hips ? hips.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3();
+  for (const side of ['left','right']) {
+    const upper = humanoid[side + 'UpperArm'];
+    const lower = humanoid[side + 'LowerArm'];
+    const hand = humanoid[side + 'Hand'];
+    if (!upper || !lower || !hand) continue;
+    wrapper.updateMatrixWorld(true);
+    const upperPosition = upper.getWorldPosition(new THREE.Vector3());
+    const sign = upperPosition.x >= hipsPosition.x ? 1 : -1;
+    const horizontal = new THREE.Vector3(sign, 0, 0);
+    alignBoneTowardWorldDirection(upper, lower, horizontal);
+    alignBoneTowardWorldDirection(lower, hand, horizontal);
+  }
+  wrapper.updateMatrixWorld(true);
+}
 function prepareExportRoot() {
   currentModel.updateMatrixWorld(true);
   const pmxRoot = currentModel.children[0];
@@ -485,6 +528,9 @@ function prepareExportRoot() {
   for (const [slot,index] of Object.entries(humanoidMapping)) {
     if (Number.isInteger(index) && clonedBones[index]) humanoid[slot] = clonedBones[index];
   }
+  if ($('autoTPose').checked) applyAutoTPose(humanoid, wrapper);
+  if ($('rotate180').checked) wrapper.rotation.y = Math.PI;
+  wrapper.updateMatrixWorld(true);
   return { wrapper, humanoid };
 }
 function downloadBlob(blob, filename) {
