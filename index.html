@@ -99,30 +99,6 @@ ul{padding-left:21px}.done{color:#23633b}
 </section>
 
 
-<section class="card">
-<h2>6. Conversion pipeline</h2>
-<ul>
-<li class="done">PMX parser integration — experimental browser prototype</li>
-<li class="done">ZIP package import — first prototype</li>
-<li class="done">Interactive 3D preview — first browser prototype</li>
-<li class="done">Humanoid mapping editor — first prototype</li>
-<li class="done">Automatic and manual mapping for core body and finger humanoid bones — improved side-aware aliases</li>
-<li>Browser-native VRM 0.x and VRM 1.0 export buttons — connected to separate Three.js serializers; test on real PMX models</li>
-<li>VRM 0.x metadata, humanoid mapping, first-person, BlendShape and optional thumbnail — implementation scaffold; validator testing pending</li>
-<li>VRM 1.0 metadata and humanoid core — implementation scaffold; validator testing pending</li>
-<li>Safe A-pose to T-pose adjustment — planned</li>
-<li>Expressions, material conversion, SpringBone and colliders — further conversion/validation work required</li>
-</ul>
-<p class="note">This is an early PMX inspection prototype, not a PMX-to-VRM converter. Parsing and preview must still be tested with representative PMX models on Android Chrome.</p>
-</section>
-<section class="card">
-<h2>7. Known limitations</h2>
-<ul>
-<li>ZIP import extracts one PMX plus common texture assets, but texture path matching and legacy formats still need model-by-model validation.</li>
-<li>PMX physics, IK animation playback, toon rendering, and every MMD-specific material feature are not guaranteed in this preview.</li>
-<li>Humanoid mapping includes core body and finger roles. Browser-native VRM export is now wired for testing, but both formats still need independent schema-validator and target-app checks. Expressions, MMD physics conversion, SpringBone authoring, and complete VRM validation remain unfinished.</li>
-</ul>
-</section>
 <p class="note" style="text-align:center">ASTER PMX2VRM LITE · Android-first · English UI</p>
 </main>
 <script type="module">
@@ -188,7 +164,6 @@ function clearModel() {
   });
   currentModel = null;
   $('exportVrm0').disabled = true;
-  $('exportVrm1').disabled = true;
   if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
   $('skeleton').disabled = true;
 }
@@ -623,45 +598,41 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(anchor); anchor.click(); anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
-async function runVrmExport(format) {
+async function runVrmExport() {
   if (!currentModel || exportBusy) return;
-  const required = format === '0.x' ? REQUIRED_0X : REQUIRED_1X;
-  const missing = getRequiredMissing(required);
+  const missing = getRequiredMissing(REQUIRED_0X);
   if (missing.length) {
-    $('exportStatus').textContent = 'Please map these required bones first: '+missing.join(', ');
+    $('exportStatus').textContent = 'Please map these required bones first: ' + missing.join(', ');
     return;
   }
-  exportBusy = true; updateExportButtons();
+  exportBusy = true;
+  updateExportButtons();
   let prepared;
   try {
-    $('exportStatus').textContent = 'Preparing avatar copy for VRM '+format+'…';
+    $('exportStatus').textContent = 'Preparing avatar copy for VRM 0.x…';
     prepared = prepareExportRoot();
-    const meta = getBrowserMeta(format);
-    let result;
-    if (format === '0.x') {
-      const thumbFile = $('metaThumbnail').files?.[0];
-      result = await exportVrm0(prepared.wrapper, {
-        humanoid:prepared.humanoid, meta,
-        thumbnail:thumbFile || undefined
-      });
-    } else {
-      result = await exportVrm10(prepared.wrapper, {humanoid:prepared.humanoid, meta});
-    }
-    const base = (meta.title || meta.name || 'Aster_Model').replace(/[^a-z0-9_-]+/gi,'_');
-    downloadBlob(result.blob, base+'_VRM_'+(format === '0.x' ? '0x' : '1.0')+'.vrm');
-    $('exportStatus').textContent = 'VRM '+format+' file generated ('+(result.blob.size/1048576).toFixed(2)+' MB). Three-vrm read-back passed. This is an experimental export; please test it in your target app and report any issue.';
+    const meta = getBrowserMeta('0.x');
+    const thumbnail = $('metaThumbnail').files?.[0];
+    const result = await exportVrm0(prepared.wrapper, {
+      humanoid: prepared.humanoid,
+      meta,
+      thumbnail: thumbnail || undefined
+    });
+    const base = (meta.title || 'Aster_Model').replace(/[^a-z0-9_-]+/gi, '_');
+    downloadBlob(result.blob, base + '_VRM_0x.vrm');
+    $('exportStatus').textContent = 'VRM 0.x generated (' + (result.blob.size / 1048576).toFixed(2) + ' MB). Experimental browser export; test in your target app.';
   } catch (error) {
-    console.error('VRM '+format+' export diagnostic:', error);
-    $('exportStatus').textContent = 'VRM '+format+' export failed: '+(error?.message || String(error));
+    console.error('VRM 0.x export diagnostic:', error);
+    $('exportStatus').textContent = 'VRM 0.x export failed: ' + (error?.message || String(error));
   } finally {
     if (prepared?.wrapper) prepared.wrapper.traverse(obj => {
-      // Geometry and textures are shared with the preview clone; do not dispose them here.
       if (obj.material) for (const material of (Array.isArray(obj.material) ? obj.material : [obj.material])) material.dispose();
     });
-    exportBusy = false; updateExportButtons();
+    exportBusy = false;
+    updateExportButtons();
   }
 }
-$('exportVrm0').addEventListener('click', () => runVrmExport('0.x'));
+$('exportVrm0').addEventListener('click', runVrmExport);
 $('downloadGlb').addEventListener('click', async () => {
   if (!currentModel) { $('glbStatus').textContent = 'Load a PMX model first.'; return; }
   const button = $('downloadGlb');
