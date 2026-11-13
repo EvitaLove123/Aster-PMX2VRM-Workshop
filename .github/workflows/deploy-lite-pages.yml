@@ -32,7 +32,6 @@ jobs:
           mkdir -p _site/src/vrm
           cp index.html _site/index.html
           cp src/vrm/three-vrm0-exporter.js _site/src/vrm/
-          cp src/vrm/three-vrm-runtime.js _site/src/vrm/
           touch _site/.nojekyll
 
       - name: Upload Pages artifact
