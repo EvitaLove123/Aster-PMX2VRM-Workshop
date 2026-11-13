@@ -15,7 +15,6 @@ Android-first, browser-based PMX to VRM 0.x converter.
 - Three.js + MMDLoader for PMX parsing and 3D preview
 - JSZip for PMX/texture ZIP packages
 - A browser-native VRM 0.x serializer under `src/vrm/`
-- Three-vrm read-back inspection for the generated file
 - No Unity runtime and no UniVRM dependency
 
 ## Important limitations
@@ -30,4 +29,4 @@ The `lite` branch includes `.github/workflows/deploy-lite-pages.yml`. Each push 
 
 ## Third-party libraries
 
-Three.js, JSZip, and three-vrm are loaded through the import map / local source modules. See their upstream licenses before redistributing.
+Three.js and JSZip are loaded through the import map. No VRM runtime library is required. See their upstream licenses before redistributing.
