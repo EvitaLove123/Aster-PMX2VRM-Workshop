@@ -1,74 +1,33 @@
-# Aster PMX2VRM Workshop
+# Aster PMX2VRM Lite
 
-Android-first browser project for inspecting MMD PMX models and preparing a PMX-to-VRM workflow.
+Android-first, browser-based PMX to VRM 0.x converter.
 
-> **Current status:** The browser prototype imports PMX/ZIP files, previews the model, and can generate a GLB preview. A separate Unity project now contains the official UniVRM runtime import, Humanoid conversion, and VRM 0.x/1.0 exporter call sites. The Unity/WebGL project has not yet been compiled or validated, so generated VRM files are not verified yet.
+## Lite workflow
 
-## Project goals
+1. Load one PMX file, or a ZIP containing one PMX and its textures.
+2. Preview the model in the browser.
+3. Auto-map or manually correct the Humanoid bones.
+4. Enter model name, author, and version metadata.
+5. Export a VRM 0.x file locally in the browser.
 
-- PMX input and ZIP texture package support
-- English-only, Android Chrome-friendly interface
-- Preserve source bone names and display English Humanoid role labels separately
-- Side-aware automatic body and finger mapping with manual correction
-- Official UniVRM runtime for GLB import and VRM 0.x / 1.0 export
-- Preserve model materials, textures, expressions, and supported secondary animation wherever conversion is validated
+## Technology
 
-## Browser implementation
+- Three.js + MMDLoader for PMX parsing and 3D preview
+- JSZip for PMX/texture ZIP packages
+- A browser-native VRM 0.x serializer under `src/vrm/`
+- Three-vrm read-back inspection for the generated file
+- No Unity runtime and no UniVRM dependency
 
-- `index.html` — PMX/ZIP import, touch-friendly 3D preview, skeleton overlay, metadata editor, Humanoid mapping, and GLB preview export
-- Three.js MMDLoader integration for PMX parsing
-- ZIP texture extraction and best-effort texture path matching
-- 49 Humanoid mapping roles: core body plus 30 finger roles, with manual dropdown correction
-- GLB preview export from the loaded PMX model
-- Browser message bridge to the separate Unity runtime
-- Export buttons wait for the official runtime and a validated Unity Humanoid Avatar
+## Important limitations
 
-## Official UniVRM runtime
+This is an experimental browser converter, not a guarantee of compatibility with every PMX model or VRM app. The current VRM 0.x serializer covers metadata and Humanoid references, with limited first-person / BlendShape support. MToon materialProperties, complete PMX material translation, MMD physics, SpringBone, and collider conversion are not complete. Test exported files in the target app before relying on them.
 
-The separate `univrm-runtime/` Unity project is pinned to:
+The PMX preview is not identical to every MMD renderer. Some toon shading, IK, physics, and legacy texture formats may differ. Preserve your original PMX and texture files.
 
-- Unity 2022.3 LTS
-- Official UniVRM / UniGLTF v0.131.4
-- VRM 0.x package `com.vrmc.univrm`
-- VRM 1.0 package `com.vrmc.vrm`
+## Run on GitHub Pages
 
-Runtime source includes:
-
-- GLB import through official `UniGLTF.GltfUtility.LoadBytesAsync`
-- Explicit source-node to `HumanBodyBones` mapping
-- Unity `AvatarBuilder.BuildHumanAvatar` and `isValid` / `isHuman` validation
-- Runtime calls to official `VRM.VRMExporter.Export` and `UniVRM10.Vrm10Exporter.Export`
-- VRM metadata translation for the current browser metadata fields
-- WebGL message and browser file-download bridges
-
-**Important:** These are source implementations, not a successful Unity build. They still need a cloud WebGL build, Android Chrome runtime test, representative PMX-derived GLB tests, and independent VRM validation. MMD expressions, full material conversion, SpringBone, and collider conversion are not complete.
-
-## Build and deploy the WebGL runtime from Android
-
-The repository includes `.github/workflows/build-univrm-webgl.yml` using GameCI.
-
-1. Add the appropriate Unity license secrets in **Settings → Secrets and variables → Actions**. For Personal: `UNITY_LICENSE` (contents of an already activated `.ulf` file), `UNITY_EMAIL`, and `UNITY_PASSWORD`. For a Professional license: `UNITY_SERIAL`, `UNITY_EMAIL`, and `UNITY_PASSWORD`.
-2. Set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
-3. Run **Build and deploy Aster UniVRM WebGL runtime** from the Actions tab.
-
-**Personal-license limitation:** Unity's current documentation says Unity Hub is the supported activation method for Unity Personal; manual `.alf` activation is not supported. Since this project is being managed from Android, a valid Personal `.ulf` must already be available from a prior Hub activation, or the build needs access to a suitable licensed runner/seat.
-
-Never commit Unity license files, passwords, or activation credentials. GameCI uses the three repository secrets to reactivate Unity in its cloud runner. The workflow cannot build Unity until valid license credentials or an activated license file are available.
-
-## Model integrity and known limitations
-
-MMD rigs may contain IK, append transforms, unusual local axes, and model-specific skin weights. Never apply a universal 180-degree bone rotation or overwrite source weights without validation. Keep the original model data recoverable during editing.
-
-The browser preview is experimental. MMD toon shading, IK animation playback, physics, and all PMX material extensions are not guaranteed. ZIP import currently expects exactly one PMX file per archive.
-
-## GitHub Pages
-
-The Pages deployment is now managed by the GitHub Actions workflow above. Do not switch it back to branch-based deployment; the workflow publishes both the Workshop page and the generated Unity WebGL runtime.
+Publish the `lite` branch from **Settings → Pages → Deploy from a branch → lite / root**, or use a separate Pages site. Open the published page in Android Chrome.
 
 ## Third-party libraries
 
-The browser preview uses Three.js and its MMDLoader / GLTFExporter modules via jsDelivr CDN, plus JSZip. Review the upstream licenses and example-module terms before bundling or redistributing dependencies.
-
-## License
-
-See [LICENSE](LICENSE) for the project license.
+Three.js, JSZip, and three-vrm are loaded through the import map / local source modules. See their upstream licenses before redistributing.
