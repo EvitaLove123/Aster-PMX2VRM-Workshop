@@ -68,25 +68,15 @@ ul{padding-left:21px}.done{color:#23633b}
 <div class="mapping-list" id="mappingList"></div>
 </section>
 <section class="card" id="metadataCard">
-<h2>4. Model information &amp; permissions</h2>
-<p class="note">Edit metadata embedded directly by the browser-based VRM 0.x / 1.0 exporters. These fields do not alter the original PMX.</p>
+<h2>4. Model information</h2>
+<p class="note">Set the basic information embedded in the VRM file.</p>
 <div class="grid">
 <div class="field"><label for="metaName">Model name</label><input id="metaName" type="text" placeholder="Model name"></div>
 <div class="field"><label for="metaVersion">Version</label><input id="metaVersion" type="text" value="1.0" placeholder="1.0"></div>
 <div class="field"><label for="metaAuthor">Author</label><input id="metaAuthor" type="text" placeholder="Author name"></div>
-<div class="field"><label for="metaContact">Contact</label><input id="metaContact" type="text" placeholder="Email or website"></div>
 </div>
-<div class="field" style="margin-top:10px"><label for="metaReference">Reference / Credit URL</label><input id="metaReference" type="text" placeholder="https://..."></div>
-<div class="grid" style="margin-top:10px">
-<div class="field"><label for="metaAllowed">Allowed user</label><select id="metaAllowed"><option value="Everyone">Everyone</option><option value="ExplicitlyLicensedPerson">Only licensed users</option><option value="OnlyAuthor">Only author</option></select></div>
-<div class="field"><label for="metaLicense">License</label><select id="metaLicense"><option value="Redistribution_Prohibited">Redistribution prohibited</option><option value="CC0">CC0</option><option value="CC_BY">CC BY</option><option value="CC_BY_NC">CC BY-NC</option><option value="CC_BY_NC_SA">CC BY-NC-SA</option><option value="Other">Other</option></select></div>
-<div class="field"><label for="metaCommercial">Commercial use</label><select id="metaCommercial"><option value="Disallow">Disallow</option><option value="Allow">Allow</option></select></div>
-<div class="field"><label for="metaViolent">Violent use</label><select id="metaViolent"><option value="Disallow">Disallow</option><option value="Allow">Allow</option></select></div>
-<div class="field"><label for="metaSexual">Sexual use</label><select id="metaSexual"><option value="Disallow">Disallow</option><option value="Allow">Allow</option></select></div>
-<div class="field"><label for="metaOther">Other permissions / URL</label><input id="metaOther" type="text" placeholder="Optional"></div>
-</div>
-<div class="field" style="margin-top:10px"><label for="metaThumbnail">Optional thumbnail (PNG/JPEG, VRM 0.x)</label><input id="metaThumbnail" type="file" accept="image/png,image/jpeg"></div>
-<div class="map-summary" id="metadataSummary">Metadata will be embedded by the browser exporter.</div>
+<div class="field" style="margin-top:10px"><label for="metaThumbnail">Optional thumbnail (PNG/JPEG)</label><input id="metaThumbnail" type="file" accept="image/png,image/jpeg"></div>
+<div class="map-summary" id="metadataSummary">Metadata will be embedded in the VRM 0.x file.</div>
 </section>
 <section class="card" id="exportCard">
 <h2>5. Download VRM</h2>
@@ -475,7 +465,7 @@ function autoMapBones() {
 }
 $('autoMap').addEventListener('click', autoMapBones);
 $('clearMap').addEventListener('click', () => { humanoidMapping = {}; buildMappingEditor(); updateExportButtons(); });
-for (const id of ['metaName','metaVersion','metaAuthor','metaContact','metaReference','metaAllowed','metaLicense','metaCommercial','metaViolent','metaSexual','metaOther']) {
+for (const id of ['metaName','metaVersion','metaAuthor']) {
   $(id).addEventListener('input', updateMetadataSummary);
   $(id).addEventListener('change', updateMetadataSummary);
 }
