@@ -434,9 +434,9 @@ function getBrowserMeta(format) {
     otherLicenseUrl: ''
   };
 }
-function alignBoneTowardWorldDirection(bone, child, targetDirection) {
-  if (!bone || !child || !bone.parent) return false;
-  wrapperUpdate();
+function alignBoneTowardWorldDirection(root, bone, child, targetDirection) {
+  if (!root || !bone || !child || !bone.parent) return false;
+  root.updateMatrixWorld(true);
   const start = bone.getWorldPosition(new THREE.Vector3());
   const end = child.getWorldPosition(new THREE.Vector3());
   const currentDirection = end.sub(start);
@@ -449,11 +449,8 @@ function alignBoneTowardWorldDirection(bone, child, targetDirection) {
   const parentWorld = bone.parent.getWorldQuaternion(new THREE.Quaternion());
   bone.quaternion.copy(parentWorld.invert().multiply(worldQuaternion));
   bone.updateMatrix();
-  wrapperUpdate();
+  root.updateMatrixWorld(true);
   return true;
-}
-function wrapperUpdate() {
-  if (currentModel) currentModel.updateMatrixWorld(true);
 }
 function applyAutoTPose(humanoid, wrapper) {
   const hips = humanoid.hips;
@@ -467,8 +464,8 @@ function applyAutoTPose(humanoid, wrapper) {
     const upperPosition = upper.getWorldPosition(new THREE.Vector3());
     const sign = upperPosition.x >= hipsPosition.x ? 1 : -1;
     const horizontal = new THREE.Vector3(sign, 0, 0);
-    alignBoneTowardWorldDirection(upper, lower, horizontal);
-    alignBoneTowardWorldDirection(lower, hand, horizontal);
+    alignBoneTowardWorldDirection(wrapper, upper, lower, horizontal);
+    alignBoneTowardWorldDirection(wrapper, lower, hand, horizontal);
   }
   wrapper.updateMatrixWorld(true);
 }
