@@ -14,12 +14,12 @@ main{max-width:1000px;margin:22px auto;padding:0 14px 40px}.hero{padding:8px 2px
 .drop{border:2px dashed #aabbd4;border-radius:14px;padding:18px 12px;text-align:center;background:#f9fbff}
 input{max-width:100%;margin-top:10px}.status{display:inline-block;border-radius:99px;background:var(--warn);color:#855b16;padding:5px 10px;font-size:12px;font-weight:800}.status.good{background:var(--good);color:#23633b}.status.bad{background:var(--bad);color:#9b3030}
 button{border:0;border-radius:11px;background:var(--blue);color:white;font-weight:700;padding:11px 15px;margin:10px 6px 0 0;min-height:44px}button.secondary{background:#eaf0f8;color:#304866}
-.note{font-size:13px;color:var(--muted)}#viewport{height:min(62vh,520px);min-height:300px;border-radius:13px;background:linear-gradient(#edf3fc,#e5ebf5);overflow:hidden;position:relative}#viewport canvas{display:block;width:100%;height:100%}.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted);pointer-events:none}
+.note{font-size:13px;color:var(--muted)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{background:#f8faff;border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}.field strong{display:block;font-size:13px}.field span{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
 .mapping-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.map-row{background:#f8faff;border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}.map-row label{display:block;font-size:13px;font-weight:800;margin-bottom:6px}.map-row select{width:100%;min-width:0;padding:10px;border:1px solid #d6dfec;border-radius:9px;background:#fff;color:var(--ink);font:inherit}.map-tools{display:flex;flex-wrap:wrap;gap:6px}.map-summary{padding:10px 12px;border-radius:12px;background:#f1f5fb;color:#425873;font-size:13px;margin-top:10px}
 @media(max-width:600px){.mapping-list{grid-template-columns:1fr}}
 ul{padding-left:21px}.done{color:#23633b}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.card{padding:14px}#viewport{min-height:280px}}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.card{padding:14px}}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/","jszip":"https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm"}}
@@ -35,15 +35,7 @@ ul{padding-left:21px}.done{color:#23633b}
 <div class="drop" style="margin-top:12px"><strong>Option B — Select a PMX file</strong><br><input id="pmx" type="file" accept=".pmx,application/octet-stream"><p class="note">You can also select a PMX file directly, then add its textures below.</p></div>
 <div class="drop" style="margin-top:12px"><strong>Optional: select texture files separately</strong><br><input id="textures" type="file" accept="image/*,.tga,.bmp,.spa,.sph" multiple><p class="note">Used with direct PMX import when the original texture folder is not available.</p></div>
 <p><span class="status" id="state">Waiting for a PMX file</span></p>
-<div id="viewport"><div class="empty" id="empty">Your 3D model preview will appear here.<br>Choose a PMX file to begin.</div></div>
-<button id="reset" class="secondary" type="button">Reset camera</button><button id="skeleton" class="secondary" type="button" disabled>Show skeleton</button>
-<p class="note">Touch-drag to orbit · Pinch to zoom · Two-finger drag to pan. The preview is local to this browser session.</p>
-<div class="field" style="margin-top:12px">
-<strong>Download 3D Preview (GLB)</strong>
-<p class="note">Load a PMX or ZIP first. When the 3D model appears above, this button becomes available. This downloads a preview GLB, not a VRM avatar.</p>
-<button id="downloadGlb" type="button" disabled>Download Preview GLB</button>
-<div class="map-summary" id="glbStatus">Waiting for a PMX model to load.</div>
-</div>
+<p class="note">Model loading and conversion run locally in this browser. No 3D preview is rendered in Lite mode.</p>
 </section>
 <section class="card">
 <h2>2. Model inspection</h2>
@@ -93,18 +85,15 @@ ul{padding-left:21px}.done{color:#23633b}
 </main>
 <script type="module">
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { exportVrm0 } from './src/vrm/three-vrm0-exporter.js';
 import JSZip from 'jszip';
 
 const $ = id => document.getElementById(id);
 const input = $('pmx'), zipInput = $('zip'), textureInput = $('textures'), state = $('state');
-const viewport = $('viewport'), empty = $('empty');
-let renderer, scene, camera, controls, currentModel = null, skeletonHelper = null;
-let textureUrls = [], textureMap = new Map(), showBones = false;
+let currentModel = null;
+let textureUrls = [], textureMap = new Map();
 let sourceBones = [], humanoidMapping = {};
 let sourceModelFileName = '';
 let exportBusy = false;
@@ -113,38 +102,8 @@ function setStatus(message, kind='') {
   state.textContent = message;
   state.className = 'status' + (kind ? ' ' + kind : '');
 }
-function initViewer() {
-  if (renderer) return;
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xeaf0f8);
-  camera = new THREE.PerspectiveCamera(40, 1, 0.1, 2000);
-  camera.position.set(0, 10, 28);
-  renderer = new THREE.WebGLRenderer({antialias:true, alpha:false});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  viewport.appendChild(renderer.domElement);
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.target.set(0, 8, 0);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8290a8, 2));
-  const key = new THREE.DirectionalLight(0xffffff, 2.2);
-  key.position.set(8, 18, 12); scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffffff, 0.8);
-  fill.position.set(-10, 8, -8); scene.add(fill);
-  const grid = new THREE.GridHelper(40, 40, 0x9eacc1, 0xd2dae7);
-  grid.position.y = 0; scene.add(grid);
-  const axes = new THREE.AxesHelper(5); axes.position.y = 0.02; scene.add(axes);
-  const resize = () => {
-    const w = Math.max(1, viewport.clientWidth), h = Math.max(1, viewport.clientHeight);
-    camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h, false);
-  };
-  new ResizeObserver(resize).observe(viewport); resize();
-  renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
-}
 function clearModel() {
-  $('downloadGlb').disabled = true;
   if (!currentModel) return;
-  scene.remove(currentModel);
   currentModel.traverse(obj => {
     if (obj.geometry) obj.geometry.dispose();
     if (obj.material) for (const m of (Array.isArray(obj.material) ? obj.material : [obj.material])) {
@@ -154,28 +113,6 @@ function clearModel() {
   });
   currentModel = null;
   $('exportVrm0').disabled = true;
-  if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
-  $('skeleton').disabled = true;
-}
-function frameModel(object) {
-  object.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(object);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const height = Math.max(size.y, 1);
-  const width = Math.max(size.x, size.z, 1);
-  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
-  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
-  const distance = Math.max(
-    height / (2 * Math.tan(verticalFov / 2)),
-    width / (2 * Math.tan(horizontalFov / 2))
-  ) * 1.35;
-  camera.position.set(center.x, center.y + height * 0.12, center.z + distance);
-  camera.near = Math.max(0.01, distance / 1000);
-  camera.far = Math.max(2000, distance * 100);
-  camera.updateProjectionMatrix();
-  controls.target.copy(center);
-  controls.update();
 }
 function normalizePath(s) {
   try { s = decodeURIComponent(s); } catch(e) {}
@@ -207,7 +144,7 @@ $('skeleton').addEventListener('click', () => {
   $('skeleton').textContent = showBones ? 'Hide skeleton' : 'Show skeleton';
 });
 async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
-  initViewer(); clearModel(); empty.style.display = 'grid';
+  clearModel();
   setStatus('Preparing model and textures…');
   sourceModelFileName = displayName.replace(/\.pmx$/i,'');
   $('fileName').textContent = displayName;
@@ -258,18 +195,12 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
       : new THREE.Box3().setFromObject(model);
     if (modelBounds.isEmpty()) throw new Error('The PMX model has no measurable geometry bounds.');
     const modelCenter = modelBounds.getCenter(new THREE.Vector3());
-    const previewRoot = new THREE.Group();
-    previewRoot.name = 'PMX_Preview_Centering';
-    previewRoot.add(model);
-    previewRoot.position.set(-modelCenter.x, -modelBounds.min.y, -modelCenter.z);
-    currentModel = previewRoot;
-    scene.add(currentModel);
-    skeletonHelper = new THREE.SkeletonHelper(model);
-    skeletonHelper.visible = false; currentModel.add(skeletonHelper);
+    const exportRoot = new THREE.Group();
+    exportRoot.name = 'PMX_Model_Root';
+    exportRoot.add(model);
+    exportRoot.position.set(-modelCenter.x, -modelBounds.min.y, -modelCenter.z);
+    currentModel = exportRoot;
     currentModel.updateMatrixWorld(true);
-    showBones = false; $('skeleton').textContent = 'Show skeleton'; $('skeleton').disabled = false;
-    empty.style.display = 'none'; frameModel(currentModel);
-    $('downloadGlb').disabled = false;
     updateExportButtons();
     let meshes = 0, materials = 0;
     model.traverse(obj => {
@@ -288,7 +219,6 @@ async function renderPmx(buffer, displayName, sourceSize, zipEntries = []) {
     const reason = err && err.message ? err.message : String(err);
     setStatus('PMX load failed: ' + reason.slice(0, 90), 'bad');
     $('details').textContent = 'PMX loading error: ' + reason + ' Check that the file is a valid PMX. Some texture formats may not be supported in this preview yet.';
-    empty.style.display = 'grid';
   }
 }
 
@@ -508,7 +438,7 @@ function getBrowserMeta(format) {
 }
 function prepareExportRoot() {
   currentModel.updateMatrixWorld(true);
-  const pmxRoot = currentModel.children.find(child => child !== skeletonHelper && !child.isSkeletonHelper);
+  const pmxRoot = currentModel.children[0];
   if (!pmxRoot) throw new Error('Could not find the PMX model node inside the preview.');
   const root = cloneSkeleton(pmxRoot);
   root.position.copy(currentModel.position);
@@ -617,7 +547,7 @@ $('downloadGlb').addEventListener('click', async () => {
     // Clone only the actual PMX model child. Never clone the preview wrapper,
     // because it also contains SkeletonHelper, which cannot be cloned safely.
     currentModel.updateMatrixWorld(true);
-    const pmxRoot = currentModel.children.find(child => child !== skeletonHelper && !child.isSkeletonHelper);
+    const pmxRoot = currentModel.children[0];
     if (!pmxRoot) throw new Error('Could not find the PMX model node inside the preview.');
     exportRoot = cloneSkeleton(pmxRoot);
     exportRoot.position.copy(currentModel.position);
