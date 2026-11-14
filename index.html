@@ -558,14 +558,11 @@ function downloadBlob(blob, filename) {
   link.textContent = '⬇ Download ' + filename;
   link.hidden = false;
   link.style.display = 'block';
-  // Attempt an automatic download; the visible link remains as an Android-friendly fallback.
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
+  // Do not auto-click a Blob URL after asynchronous export: Android Chrome can
+  // treat that as navigation instead of a download because user activation expired.
+  // Keep a visible download link so the user taps it directly.
+  link.setAttribute('rel', 'noopener');
+  link.setAttribute('aria-label', 'Download generated VRM file');
   return url;
 }
 async function runVrmExport() {
@@ -591,7 +588,7 @@ async function runVrmExport() {
     });
     const base = (meta.title || 'Aster_Model').replace(/[^a-z0-9_-]+/gi, '_');
     downloadBlob(result.blob, base + '_VRM_0x.vrm');
-    $('exportStatus').textContent = 'VRM 0.x generated (' + (result.blob.size / 1048576).toFixed(2) + ' MB). Experimental browser export; test in your target app.';
+    $('exportStatus').textContent = 'VRM 0.x generated (' + (result.blob.size / 1048576).toFixed(2) + ' MB). Tap the blue Download link above to save it on Android. Experimental browser export; test in your target app.';
   } catch (error) {
     console.error('VRM 0.x export diagnostic:', error);
     $('exportStatus').textContent = 'VRM 0.x export failed: ' + (error?.message || String(error));
