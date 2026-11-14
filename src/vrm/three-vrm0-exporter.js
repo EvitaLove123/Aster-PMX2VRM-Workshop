@@ -290,9 +290,7 @@ function buildMaterialProperties(gltfJson, unlit) {
         ? 'VRM/UnlitTransparent'
         : alphaMode === 'MASK'
           ? 'VRM/UnlitCutout'
-          : textureIndex !== undefined
-            ? 'VRM/UnlitTexture'
-            : 'VRM/UnlitColor';
+          : 'VRM/UnlitTexture';
     const textureProperties = {};
     if (unlit && Number.isInteger(textureIndex)) textureProperties._MainTex = textureIndex;
     return {
@@ -402,6 +400,17 @@ export async function exportVrm0(scene, options = {}) {
   };
 
   const blendShapeMaster = buildBlendShapeMaster(options.blendShapeGroups, scene, json);
+
+  if (options.unlit === true) {
+    json.extensionsUsed = Array.isArray(json.extensionsUsed) ? json.extensionsUsed : [];
+    if (!json.extensionsUsed.includes('KHR_materials_unlit')) {
+      json.extensionsUsed.push('KHR_materials_unlit');
+    }
+    for (const material of (json.materials || [])) {
+      material.extensions = material.extensions || {};
+      material.extensions.KHR_materials_unlit = {};
+    }
+  }
 
   const vrm = {
     specVersion: '0.0',
