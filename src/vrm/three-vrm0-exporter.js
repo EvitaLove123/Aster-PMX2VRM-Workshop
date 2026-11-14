@@ -365,7 +365,9 @@ export async function exportVrm0(scene, options = {}) {
     onlyVisible: false,
     trs: false,
     includeCustomExtensions: true,
-    maxTextureSize: options.maxTextureSize || Infinity,
+    // A finite texture cap reduces canvas/GPU memory spikes on Android.
+    // Callers can explicitly pass Infinity when exporting on desktop.
+    maxTextureSize: options.maxTextureSize === undefined ? 2048 : options.maxTextureSize,
   });
   if (!(baseGlb instanceof ArrayBuffer)) {
     throw new Error('GLTFExporter did not return binary GLB data.');
