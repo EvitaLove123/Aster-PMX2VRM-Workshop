@@ -80,8 +80,9 @@ ul{padding-left:21px}.done{color:#23633b}
 <p class="note">Changes the model's facing direction only. It does not correct an upside-down model.</p>
 </div>
 <div class="map-tools">
-<button id="exportVrm0" type="button" disabled>Download VRM 0.x</button>
+<button id="exportVrm0" type="button" disabled>Export VRM 0.x</button>
 </div>
+<a id="downloadResult" hidden style="display:none;margin-top:12px;padding:12px 16px;border-radius:10px;background:#eaf4ff;color:#1457a6;font-weight:700;text-decoration:none;text-align:center" download>⬇ Download generated VRM 0.x</a>
 <div class="map-summary" id="exportStatus">Load a PMX model, complete its required Humanoid mapping, then export VRM 0.x.</div>
 </section>
 
@@ -102,6 +103,7 @@ let textureUrls = [], textureMap = new Map();
 let sourceBones = [], humanoidMapping = {};
 let sourceModelFileName = '';
 let exportBusy = false;
+let lastDownloadUrl = null;
 
 function setStatus(message, kind='') {
   state.textContent = message;
@@ -532,11 +534,24 @@ function prepareExportRoot() {
 }
 function downloadBlob(blob, filename) {
   if (!(blob instanceof Blob) || !blob.size) throw new Error('Exporter returned an empty file.');
+  if (lastDownloadUrl) URL.revokeObjectURL(lastDownloadUrl);
   const url = URL.createObjectURL(blob);
+  lastDownloadUrl = url;
+  const link = $('downloadResult');
+  link.href = url;
+  link.download = filename;
+  link.textContent = '⬇ Download ' + filename;
+  link.hidden = false;
+  link.style.display = 'block';
+  // Attempt an automatic download; the visible link remains as an Android-friendly fallback.
   const anchor = document.createElement('a');
-  anchor.href = url; anchor.download = filename; anchor.style.display = 'none';
-  document.body.appendChild(anchor); anchor.click(); anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 15000);
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  return url;
 }
 async function runVrmExport() {
   if (!currentModel || exportBusy) return;
