@@ -78,6 +78,11 @@ ul{padding-left:21px}.done{color:#23633b}
 <p class="note">Adjusts the cloned arm bones toward a horizontal T-pose. The imported PMX and its original pose are not changed.</p>
 <label><input id="rotate180" type="checkbox"> Rotate model 180° around vertical axis (Y)</label>
 <p class="note">Changes the model's facing direction only. It does not correct an upside-down model.</p>
+<label><input id="unlitMode" type="checkbox"> Use Unlit materials</label>
+<p class="note">Exports materials without scene-light shading. Textures and transparency are retained where supported.</p>
+<label for="exportScale" style="display:block;font-weight:700;margin-top:10px">Model scale</label>
+<input id="exportScale" type="number" inputmode="decimal" min="0.01" max="10" step="0.05" value="1" style="width:100%;padding:10px;border:1px solid #d6dfec;border-radius:9px">
+<p class="note">1.00 = original size. Use values such as 0.50 to make the model half-size or 2.00 to double it.</p>
 </div>
 <div class="map-tools">
 <button id="exportVrm0" type="button" disabled>Export VRM 0.x</button>
@@ -478,29 +483,39 @@ function prepareExportRoot() {
   const root = cloneSkeleton(pmxRoot);
   root.position.copy(currentModel.position);
   root.quaternion.copy(currentModel.quaternion);
-  root.scale.copy(currentModel.scale);
+  const scaleValue = Number($('exportScale').value);
+  if (!Number.isFinite(scaleValue) || scaleValue <= 0 || scaleValue > 10) {
+    throw new Error('Model scale must be greater than 0 and no more than 10.');
+  }
+  root.scale.copy(currentModel.scale).multiplyScalar(scaleValue);
   root.name = $('metaName').value.trim() || sourceModelFileName || 'Aster_Model';
+  const useUnlit = $('unlitMode').checked;
   root.traverse(obj => {
     if (!obj.isMesh) return;
     obj.frustumCulled = false;
     const convert = material => {
-      const standard = new THREE.MeshStandardMaterial({
+      const common = {
         name:material.name || 'PMX Material',
         color:material.color ? material.color.clone() : new THREE.Color(0xffffff),
         map:material.map || null, alphaMap:material.alphaMap || null,
         transparent:!!material.transparent, opacity:material.opacity == null ? 1 : material.opacity,
         side:material.side == null ? THREE.DoubleSide : material.side,
-        roughness:0.85, metalness:0
+        vertexColors:!!material.vertexColors
+      };
+      if (useUnlit) {
+        return new THREE.MeshBasicMaterial({ ...common, toneMapped:false });
+      }
+      const standard = new THREE.MeshStandardMaterial({
+        ...common, roughness:0.85, metalness:0
       });
       if (material.emissive) standard.emissive.copy(material.emissive);
       if (material.emissiveMap) standard.emissiveMap = material.emissiveMap;
-      if (material.vertexColors) standard.vertexColors = true;
       return standard;
     };
     obj.material = Array.isArray(obj.material) ? obj.material.map(convert) : convert(obj.material || {});
   });
   const wrapper = new THREE.Group();
-  wrapper.name = 'AsterAvatar';
+  wrapper.name = 'RootModel';
   wrapper.add(root);
   // GLTF node names must be unambiguous for both VRM serializers.
   const nameCounts = new Map();
@@ -571,6 +586,7 @@ async function runVrmExport() {
     const result = await exportVrm0(prepared.wrapper, {
       humanoid: prepared.humanoid,
       meta,
+      unlit: $('unlitMode').checked,
       thumbnail: thumbnail || undefined
     });
     const base = (meta.title || 'Aster_Model').replace(/[^a-z0-9_-]+/gi, '_');
