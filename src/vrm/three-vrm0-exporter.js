@@ -3,8 +3,8 @@
  *
  * Writes the monolithic extensions.VRM payload into a GLB produced by
  * Three.js GLTFExporter. This implementation covers metadata, humanoid and first-person references,
- * optional BlendShapeMaster groups and an embedded PNG/JPEG thumbnail.
- * MToon/materialProperties and secondaryAnimation remain future increments.
+ * optional BlendShapeMaster groups, Unlit materialProperties and an embedded PNG/JPEG thumbnail.
+ * MToon and secondaryAnimation remain future increments.
  */
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
@@ -278,6 +278,36 @@ async function embedThumbnail(json, chunks, thumbnail) {
   return textureIndex;
 }
 
+function buildMaterialProperties(gltfJson, unlit) {
+  return (gltfJson.materials || []).map((material, index) => {
+    const pbr = material.pbrMetallicRoughness || {};
+    const factor = Array.isArray(pbr.baseColorFactor) ? pbr.baseColorFactor : [1, 1, 1, 1];
+    const textureIndex = pbr.baseColorTexture?.index;
+    const alphaMode = material.alphaMode || 'OPAQUE';
+    const shader = !unlit
+      ? 'VRM_USE_GLTFSHADER'
+      : alphaMode === 'BLEND'
+        ? 'VRM/UnlitTransparent'
+        : alphaMode === 'MASK'
+          ? 'VRM/UnlitCutout'
+          : textureIndex !== undefined
+            ? 'VRM/UnlitTexture'
+            : 'VRM/UnlitColor';
+    const textureProperties = {};
+    if (unlit && Number.isInteger(textureIndex)) textureProperties._MainTex = textureIndex;
+    return {
+      name: material.name || 'Material_' + index,
+      shader,
+      renderQueue: alphaMode === 'BLEND' ? 3000 : alphaMode === 'MASK' ? 2450 : 2000,
+      floatProperties: unlit && alphaMode === 'MASK' ? { _Cutoff: Number(material.alphaCutoff ?? 0.5) } : {},
+      vectorProperties: unlit ? { _Color: factor } : {},
+      textureProperties,
+      keywordMap: {},
+      tagMap: {}
+    };
+  });
+}
+
 function mapNodes(scene, gltfJson, mapping) {
   if (!mapping || typeof mapping !== 'object') throw new Error('Humanoid mapping is required.');
 
@@ -389,6 +419,7 @@ export async function exportVrm0(scene, options = {}) {
       hasTranslationDoF: false,
     },
     firstPerson,
+    materialProperties: buildMaterialProperties(json, options.unlit === true),
   };
   if (blendShapeMaster) vrm.blendShapeMaster = blendShapeMaster;
 
@@ -416,7 +447,8 @@ export async function exportVrm0(scene, options = {}) {
       humanoidBones: humanoid.humanBones.length,
       blendShapeGroups: blendShapeMaster?.blendShapeGroups.length || 0,
       thumbnailTextureIndex,
-      note: 'VRM 0.x core: metadata, humanoid and first-person are serialized. MToon material mapping and secondary animation are not yet serialized.',
+      unlit: options.unlit === true,
+      note: 'VRM 0.x core: metadata, humanoid, first-person and materialProperties are serialized. MToon and secondary animation are not yet serialized.',
     },
   };
 }
